@@ -1,0 +1,93 @@
+paths:
+  "source_statements_path": "statements/bank"
+  "preprocessed_statements_path": "statements/preprocessed"
+
+csv_loading:
+  date_type_columns:
+    - "Data księgowania"
+    - "Data waluty"
+
+  float_type_columns:
+    - "Kwota operacji"
+
+  column_name_mapping:
+    "Data księgowania": "PostingDate"
+    "Data waluty": "ValueDate"
+    "Nadawca / Odbiorca": "Counterparty"
+    "Adres nadawcy / odbiorcy": "CounterpartyAddress"
+    "Rachunek źródłowy": "SourceAccount"
+    "Rachunek docelowy": "TargetAccount"
+    "Tytułem": "Title"
+    "Kwota operacji": "Amount"
+    "Waluta": "Currency"
+    "Numer referencyjny": "ReferenceNumber"
+    "Typ operacji": "OperationType"
+    "Kategoria": "ExpenseType"
+
+date_stamp_column: "PostingDate"
+expense_type_column: "ExpenseType"
+
+labeling:
+  category_structure:
+    "Utrzymanie":
+      "Zdrowie":
+        - "Lekarstwa"
+        - "Opieka medyczna"
+      "Transport":
+        - "Paliwo"
+        - "Transport publiczny"
+        - "Taxi"
+        - "Bilety lotnicze"
+      "Rachunki":
+        - "Czynsz"
+        - "Internet, TV, telefon"
+        - "Ubezpieczenia"
+        - "Prąd"
+      "Wydatki bieżące":
+        - "Artykuły spożywcze"
+        - "Kosmetyki"
+        - "Zwierzęta domowe"
+        - "Uroda, fryzjer, kosmetyczka"
+        - "Fotografia"
+        - "Zakupy przez internet"
+        - "Alkohol"
+        - "Papierosy"
+      "Podatki i opłaty":
+        - "Opłaty bankowe"
+      "Obciążenia wewnętrzne":
+        - "Przelew wewnętrzny"
+        - "Założenie lokaty, zakup funduszy, akcji"
+        - "Spłata kredytu / pożyczki"
+    "Widzi-mi-się":
+      "Odzież i dodatki":
+        - "Dodatki, biżuteria"
+        - "Ubrania"
+        - "Usługi (pralnia, krawiec, szewc,...)"
+      "Dom":
+        - "Artykuły dekoracyjne"
+        - "Naprawy i remonty"
+        - "Wyposażenie"
+        - "Sprzęt AGD i RTV"
+        - "Ogród"
+        - "Sprzątanie"
+      "Rozrywka i wypoczynek":
+        - "Restauracje i kawiarnie"
+        - "Multimedia"
+        - "Sport"
+        - "Podróże"
+        - "Puby i kluby"
+        - "Gazety lub czasopisma"
+        - "Kino i teatr"
+        - "Hobby"
+        - "Hotele"
+        - "Książki"
+      "Dla innych":
+        - "Prezenty, upominki"
+    "Inne":
+      "Inne":
+        - "Inne"
+        - "Wypłata z bankomatu"
+        - "Wypłata z rachunku"
+    "Bez kategorii":
+      "Bez kategorii":
+        - "Bez kategorii"
