@@ -26,7 +26,8 @@ def _aggregate_by_time(
     else:
         raise ValueError(f"Unknown granularity: {granularity}")
 
-    grouped = df.groupby([group_col, stack_col, "Period"])[amount_col].sum().reset_index()
+    group_cols = list(dict.fromkeys([group_col, stack_col]))
+    grouped = df.groupby(group_cols + ["Period"])[amount_col].sum().reset_index()
     return grouped
 
 
@@ -35,6 +36,7 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
     depth = get_tier_tree().tier_depth
     group_col = "Tier1"
     stack_col = f"Tier{min(2, depth)}"
+    single_tier = (group_col == stack_col)
 
     group_vals = sorted(df[group_col].dropna().unique())
     n_cols = max(len(group_vals), 1)
@@ -53,19 +55,31 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
 
         for col_idx, g in enumerate(group_vals, start=1):
             g_data = agg[agg[group_col] == g]
-            stack_vals = sorted(g_data[stack_col].dropna().unique())
 
-            for sv in stack_vals:
-                subset = g_data[g_data[stack_col] == sv].sort_values("Period")
+            if single_tier:
+                subset = g_data.sort_values("Period")
                 trace = go.Bar(
                     x=subset["Period"].astype(str),
                     y=subset[amount_col],
-                    name=sv,
-                    legendgroup=sv,
+                    name=g,
+                    legendgroup=g,
                     showlegend=(col_idx == 1),
                     visible=(gran == "month"),
                 )
                 fig.add_trace(trace, row=1, col=col_idx)
+            else:
+                stack_vals = sorted(g_data[stack_col].dropna().unique())
+                for sv in stack_vals:
+                    subset = g_data[g_data[stack_col] == sv].sort_values("Period")
+                    trace = go.Bar(
+                        x=subset["Period"].astype(str),
+                        y=subset[amount_col],
+                        name=sv,
+                        legendgroup=sv,
+                        showlegend=(col_idx == 1),
+                        visible=(gran == "month"),
+                    )
+                    fig.add_trace(trace, row=1, col=col_idx)
 
     total_traces = len(fig.data)
     traces_per_count = total_traces // len(granularities)

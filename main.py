@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from config import get_config
-from etl.loading import load_all_csv_files, load_income_from_csv_files
+from etl.loading import load_all_from_dir
 from etl.preprocessing import preprocess
 from etl.cache import is_cache_valid, load_cache, save_cache
 from plots.sunburst import create_transaction_sunburst
@@ -33,8 +33,7 @@ def main() -> None:
         expense_df, income_df = load_cache()
     else:
         logger.info("Computing from source CSVs")
-        raw_df = load_all_csv_files(source_dir)
-        income_df = load_income_from_csv_files(source_dir)
+        raw_df, income_df = load_all_from_dir(source_dir)
         expense_df = preprocess(raw_df)
         save_cache(expense_df, income_df, source_dir)
 

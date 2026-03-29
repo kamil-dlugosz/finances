@@ -35,3 +35,15 @@ class TestLoadIncome:
         if len(df) > 0:
             assert "Amount" in df.columns
             assert (df["Amount"] > 0).all()
+
+
+class TestLoadAllFromDir:
+    def test_single_parse_split(self):
+        from etl.loading import load_all_from_dir
+        if not get_config().paths.source_statements_path.exists():
+            pytest.skip("No test data")
+        expense_df, income_df = load_all_from_dir(get_config().paths.source_statements_path)
+        assert len(expense_df) > 0
+        assert (expense_df["Amount"] > 0).all()
+        if len(income_df) > 0:
+            assert (income_df["Amount"] > 0).all()

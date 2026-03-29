@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 import yaml
 
@@ -9,7 +10,7 @@ from config.models import PROJECT_ROOT, AppConfig, TierTree
 CONFIG_DIR = PROJECT_ROOT / "config"
 
 
-def _load_yaml(path) -> dict:
+def _load_yaml(path: Path) -> dict:
     try:
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)

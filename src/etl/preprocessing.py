@@ -43,8 +43,12 @@ def _load_custom_tiers() -> list[dict]:
     path = PROJECT_ROOT / "config" / "custom_tiers.yaml"
     if not path.exists():
         return []
-    with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except yaml.YAMLError as exc:
+        logger.warning("Failed to parse %s: %s — skipping custom tiers", path, exc)
+        return []
     return data.get("custom_tiers", [])
 
 

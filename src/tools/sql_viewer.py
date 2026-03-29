@@ -133,9 +133,9 @@ def main() -> None:
         sys.exit(1)
 
     con = duckdb.connect(":memory:")
-    con.execute(f"CREATE TABLE transactions AS SELECT * FROM read_parquet('{EXPENSE_PARQUET}')")
+    con.execute("CREATE TABLE transactions AS SELECT * FROM read_parquet(?)", [str(EXPENSE_PARQUET)])
     if INCOME_PARQUET.exists():
-        con.execute(f"CREATE TABLE income AS SELECT * FROM read_parquet('{INCOME_PARQUET}')")
+        con.execute("CREATE TABLE income AS SELECT * FROM read_parquet(?)", [str(INCOME_PARQUET)])
 
     console.print("[bold]SQL Viewer[/bold] — type SQL or use \\tables, \\save <name>, \\load <name>, \\quit")
     console.print()

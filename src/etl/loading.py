@@ -51,24 +51,38 @@ def _load_and_combine(input_dir: Path) -> pd.DataFrame:
     return combined
 
 
+def _amount_col() -> str:
+    cfg = _csv_loading()
+    return cfg.column_name_mapping.get(cfg.float_type_columns[0], cfg.float_type_columns[0])
+
+
 def load_all_csv_files(input_dir: Path) -> pd.DataFrame:
     """Load expense transactions: negate amounts and keep positives (debits)."""
-    cfg = _csv_loading()
     combined = _load_and_combine(input_dir)
-
-    amount_col = cfg.column_name_mapping.get(cfg.float_type_columns[0], cfg.float_type_columns[0])
-    combined[amount_col] = combined[amount_col] * -1
-    combined = combined[combined[amount_col] > 0]
-
+    col = _amount_col()
+    combined[col] = combined[col] * -1
+    combined = combined[combined[col] > 0]
     return combined.reset_index(drop=True)
 
 
 def load_income_from_csv_files(input_dir: Path) -> pd.DataFrame:
     """Load income transactions: keep rows where raw amount > 0 (credits)."""
-    cfg = _csv_loading()
     combined = _load_and_combine(input_dir)
-
-    amount_col = cfg.column_name_mapping.get(cfg.float_type_columns[0], cfg.float_type_columns[0])
-    combined = combined[combined[amount_col] > 0]
-
+    col = _amount_col()
+    combined = combined[combined[col] > 0]
     return combined.reset_index(drop=True)
+
+
+def load_all_from_dir(input_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load CSVs once and split into (expenses, income). More efficient than
+    calling load_all_csv_files + load_income_from_csv_files separately."""
+    combined = _load_and_combine(input_dir)
+    col = _amount_col()
+
+    income_df = combined[combined[col] > 0].reset_index(drop=True)
+
+    expense_combined = combined.copy()
+    expense_combined[col] = expense_combined[col] * -1
+    expense_df = expense_combined[expense_combined[col] > 0].reset_index(drop=True)
+
+    return expense_df, income_df

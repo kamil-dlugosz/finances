@@ -87,7 +87,16 @@ def cmd_add_cluster(args: argparse.Namespace) -> None:
         data = {}
 
     rules = data.get("custom_tiers", [])
-    rules.append(new_rule)
+    existing = [
+        r for r in rules
+        if r.get("match", {}).get("tier_path") == args.tier
+        and r.get("assign", {}).get(f"tier_{len(tier_parts) + 1}") == args.name
+    ]
+    if existing:
+        logger.warning("Rule for tier '%s' → '%s' already exists — updating keywords", args.tier, args.name)
+        existing[0]["match"]["keywords"] = cluster["keywords"]
+    else:
+        rules.append(new_rule)
     data["custom_tiers"] = rules
 
     with open(CUSTOM_TIERS_PATH, "w", encoding="utf-8") as f:

@@ -31,7 +31,7 @@ def _run_query_with_granularity(
     final_sql = sql.replace("{granularity}", granularity)
     try:
         return con.execute(final_sql).fetchdf()
-    except (duckdb.Error, KeyError) as exc:
+    except duckdb.Error as exc:
         logger.warning("Query failed (granularity=%s): %s", granularity, exc)
         return pd.DataFrame()
 

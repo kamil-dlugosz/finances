@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Finances Dashboard</title>
-  <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
@@ -64,7 +64,7 @@
         <table class="stats-table" id="waterfall-stats">
           <thead><tr><th>Tier Path</th><th>Avg Amount</th><th>Transactions</th><th>Total</th></tr></thead>
           <tbody></tbody>
-          <tfoot><tr><td><strong>Sum of Averages</strong></td><td id="stats-avg-sum"></td><td id="stats-count-sum"></td><td id="stats-total-sum"></td></tr></tfoot>
+          <tfoot><tr><td><strong>Totals</strong></td><td id="stats-avg-sum"></td><td id="stats-count-sum"></td><td id="stats-total-sum"></td></tr></tfoot>
         </table>
       </div>
 
@@ -157,8 +157,42 @@
     }
     renderStats(WATERFALL_STATS);
 
-    new HierarchicalLegend("expense-legend", TIER_TREE, DIM_VALUES, (state) => {});
-    new HierarchicalLegend("income-legend", TIER_TREE, {}, (state) => {});
+    function filterTraces(plotId, plotData, state, useDims) {
+      const selectedTiers = new Set(state.tiers);
+      const indices = [];
+      plotData.data.forEach((trace, i) => {
+        let show = true;
+        const name = trace.name || "";
+        if (selectedTiers.size > 0 && name && !selectedTiers.has(name)) {
+          show = false;
+        }
+        if (show && useDims) {
+          for (const [dimName, vals] of Object.entries(state.dimensions)) {
+            if (vals.length === 0) { show = false; break; }
+          }
+        }
+        indices.push(show);
+      });
+      Plotly.restyle(plotId, { visible: indices.map(v => v ? true : "legendonly") });
+    }
+
+    function filterWaterfallStats(stats, state) {
+      const selectedTiers = new Set(state.tiers);
+      if (selectedTiers.size === 0) { renderStats([]); return; }
+      const filtered = stats.filter(s => {
+        const parts = s.tier_path.split(" → ");
+        return parts.every(p => selectedTiers.has(p));
+      });
+      renderStats(filtered);
+    }
+
+    const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, DIM_VALUES, (state) => {
+      filterTraces("barplots-plot", BARPLOTS_DATA, state, true);
+    });
+
+    const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, {}, (state) => {
+      filterWaterfallStats(WATERFALL_STATS, state);
+    });
   </script>
 </body>
 </html>

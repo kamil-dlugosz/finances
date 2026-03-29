@@ -26,7 +26,7 @@ class ValidationReport:
 
     def summary(self) -> str:
         if not self.suspects:
-            return "All ExpenseType values look consistent within their Tier2 groups."
+            return "All ExpenseType values look consistent within their parent tier groups."
         lines = [f"Found {len(self.suspects)} suspect ExpenseType(s):\n"]
         for s in self.suspects:
             lines.append(
@@ -46,7 +46,7 @@ def validate_expense_types(
     parent_tier_col = f"Tier{max(1, depth - 1)}"
     report = ValidationReport()
 
-    for tier2, group in df.groupby(parent_tier_col):
+    for parent_tier, group in df.groupby(parent_tier_col):
         expense_types = group[expense_col].unique()
         if len(expense_types) < 2:
             continue
@@ -80,7 +80,7 @@ def validate_expense_types(
                 samples = et_rows.get("Title", pd.Series(dtype=str)).head(3).tolist()
                 report.suspects.append(SuspectEntry(
                     expense_type=et,
-                    parent_tier=str(tier2),
+                    parent_tier=str(parent_tier),
                     avg_similarity=round(avg_sim, 4),
                     sample_titles=samples,
                 ))

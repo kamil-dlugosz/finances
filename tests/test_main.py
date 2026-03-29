@@ -22,8 +22,7 @@ class TestMain:
         with (
             patch("sys.argv", ["main", "--force"]),
             patch("main.get_config") as mock_cfg,
-            patch("main.load_all_csv_files", return_value=preprocessed_expense_df),
-            patch("main.load_income_from_csv_files", return_value=sample_income_df),
+            patch("main.load_all_from_dir", return_value=(preprocessed_expense_df, sample_income_df)),
             patch("main.preprocess", return_value=preprocessed_expense_df),
             patch("main.save_cache"),
             patch("main.create_transaction_sunburst", return_value=dummy_fig),
@@ -53,7 +52,7 @@ class TestMain:
             patch("main.get_config") as mock_cfg,
             patch("main.is_cache_valid", return_value=True),
             patch("main.load_cache", return_value=(preprocessed_expense_df, sample_income_df)),
-            patch("main.load_all_csv_files") as mock_load,
+            patch("main.load_all_from_dir") as mock_load,
             patch("main.create_transaction_sunburst", return_value=dummy_fig),
             patch("main.create_hierarchical_barplots", return_value=dummy_fig),
             patch("main.create_income_barplot", return_value=dummy_fig),

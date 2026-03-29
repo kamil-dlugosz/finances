@@ -7,19 +7,19 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-pandas = "^2.2"
-plotly = "^6.0"
-pydantic = "^2.10"
-pyyaml = "^6.0"
-pyarrow = "^19.0"
-duckdb = "^1.2"
-scikit-learn = "^1.6"
-sqlparse = "^0.5"
-rich = "^13.9"
-numpy = "^2.2"
+pandas = ">=2.2,<3"
+plotly = ">=6.0,<7"
+pydantic = ">=2.10,<3"
+pyyaml = ">=6.0,<7"
+pyarrow = ">=19.0,<20"
+duckdb = ">=1.2,<2"
+scikit-learn = ">=1.6,<2"
+sqlparse = ">=0.5,<1"
+rich = ">=13.9,<14"
+numpy = ">=2.2,<3"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3"
+pytest = ">=8.3,<10"
 
 [build-system]
 requires = ["poetry-core"]

@@ -15,3 +15,13 @@ class TestClustering:
         assert len(result.clusters) == 2
         assert all("keywords" in c for c in result.clusters)
         assert all("size" in c for c in result.clusters)
+
+    def test_empty_subset_returns_zero_clusters(self, preprocessed_expense_df):
+        result = cluster_tier(preprocessed_expense_df, "NonexistentTier/Path", n_clusters=3, seed=42)
+        assert result.n_clusters == 0
+        assert result.clusters == []
+
+    def test_fewer_rows_than_clusters(self, preprocessed_expense_df):
+        result = cluster_tier(preprocessed_expense_df, "Utrzymanie/Zdrowie", n_clusters=100, seed=42)
+        assert result.n_clusters <= len(preprocessed_expense_df)
+        assert len(result.clusters) > 0

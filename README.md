@@ -12,10 +12,19 @@ SQL-driven custom query plots.
 
 ## Installation
 
+Using [uv](https://docs.astral.sh/uv/):
+
 ```bash
 uv venv --python 3.12 .venv
 source .venv/bin/activate
 uv pip install pandas plotly pydantic pyyaml pyarrow duckdb scikit-learn sqlparse rich numpy pytest
+```
+
+Or using [Poetry](https://python-poetry.org/):
+
+```bash
+poetry install
+poetry shell
 ```
 
 ## Project Structure

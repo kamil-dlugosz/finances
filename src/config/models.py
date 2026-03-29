@@ -89,7 +89,7 @@ class PreprocessingColumnsConfig(BaseModel):
 
 class HierarchyConfig(BaseModel):
     dimensions: list[str]
-    tiers: dict
+    tiers: dict  # recursive TierNode; validated by field_validator below
 
     @field_validator("tiers")
     @classmethod
