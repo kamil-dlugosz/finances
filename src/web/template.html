@@ -14,6 +14,7 @@
     .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 20px; }
     .section h2 { font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid #4a90d9; padding-bottom: 6px; }
     .plot-container { width: 100%; }
+    #sunburst-plot { min-height: 750px; }
     .stats-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
     .stats-table th { background: #f0f0f0; font-weight: 600; }
@@ -28,6 +29,9 @@
     .modal code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 14px; }
     .modal button { margin-top: 14px; padding: 6px 20px; cursor: pointer; border: 1px solid #999; border-radius: 4px; }
     .sidebar h3 { font-size: 15px; margin-bottom: 10px; }
+    .gran-btn { padding: 4px 14px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
+    .gran-btn:hover { background: #f0f0f0; }
+    .gran-btn.active { background: #4a90d9; color: #fff; border-color: #4a90d9; }
   </style>
 </head>
 <body>
@@ -54,6 +58,11 @@
       <!-- Section 2: Hierarchical Bar Plots -->
       <div class="section">
         <h2>Expense Breakdown by Time</h2>
+        <div id="bar-granularity" style="margin-bottom:10px;display:flex;gap:6px;font-size:13px;">
+          <button class="gran-btn active" data-idx="0">Month</button>
+          <button class="gran-btn" data-idx="1">Week</button>
+          <button class="gran-btn" data-idx="2">Day</button>
+        </div>
         <div id="barplots-plot" class="plot-container"></div>
       </div>
 
@@ -129,7 +138,7 @@
     const SUNBURST_FRAMES = SUNBURST_META.frames;
     const SUNBURST_THRESHOLDS = SUNBURST_META.thresholds;
     const MAX_SUNBURST_DEPTH = SUNBURST_META.max_depth;
-    const SUNBURST_LAYOUT = {margin: {t: 40, l: 20, r: 20, b: 20}};
+    const SUNBURST_LAYOUT = {margin: {t: 40, l: 20, r: 20, b: 20}, height: 750};
 
     const BARPLOTS_DATA = _loaded["data-barplots"];
     const INCOME_DATA = _loaded["data-income"];
@@ -187,8 +196,40 @@
     }
     updateSunburst();
 
+    /* --- Barplots: granularity + tier filter --- */
+    const BAR_BUTTONS = BARPLOTS_DATA.layout.updatemenus ? BARPLOTS_DATA.layout.updatemenus[0].buttons : [];
+    let currentBarGranIdx = 0;
+    let currentBarTierState = null;
+
+    const barLayout = Object.assign({}, BARPLOTS_DATA.layout);
+    delete barLayout.updatemenus;
+    Plotly.newPlot("barplots-plot", BARPLOTS_DATA.data, barLayout, {responsive: true});
+
+    document.querySelectorAll(".gran-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".gran-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentBarGranIdx = parseInt(btn.dataset.idx);
+        updateBarplots();
+      });
+    });
+
+    function updateBarplots() {
+      if (!BAR_BUTTONS.length) return;
+      const base = BAR_BUTTONS[currentBarGranIdx].args[0].visible;
+      const selectedTiers = currentBarTierState ? new Set(currentBarTierState.tiers) : null;
+
+      const visibility = base.map((v, i) => {
+        if (!v) return false;
+        if (!selectedTiers || selectedTiers.size === 0) return true;
+        const name = BARPLOTS_DATA.data[i] ? (BARPLOTS_DATA.data[i].name || "") : "";
+        return selectedTiers.has(name) ? true : "legendonly";
+      });
+      Plotly.restyle("barplots-plot", { visible: visibility });
+    }
+    updateBarplots();
+
     /* --- Other plots --- */
-    Plotly.newPlot("barplots-plot", BARPLOTS_DATA.data, BARPLOTS_DATA.layout, {responsive: true});
     Plotly.newPlot("income-plot", INCOME_DATA.data, INCOME_DATA.layout, {responsive: true});
     Plotly.newPlot("waterfall-plot", WATERFALL_DATA.data, WATERFALL_DATA.layout, {responsive: true});
 
@@ -243,19 +284,9 @@
     renderStats(WATERFALL_STATS);
 
     /* --- Legend filter functions --- */
-    function filterBarTracesByTier(plotId, plotData, state) {
-      const selectedTiers = new Set(state.tiers);
-      const visibility = plotData.data.map(trace => {
-        const name = trace.name || "";
-        if (selectedTiers.size > 0 && name && !selectedTiers.has(name)) return "legendonly";
-        return true;
-      });
-      Plotly.restyle(plotId, { visible: visibility });
-    }
-
     function filterWaterfallStats(stats, state) {
       const selectedTiers = new Set(state.tiers);
-      if (selectedTiers.size === 0) { renderStats([]); return; }
+      if (selectedTiers.size === 0) { renderStats(stats); return; }
       const filtered = stats.filter(s => {
         const parts = s.tier_path.split(" \u2192 ");
         return parts.some(p => selectedTiers.has(p));
@@ -266,8 +297,9 @@
     /* --- Legends --- */
     const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, (state) => {
       currentExpenseTierState = state;
+      currentBarTierState = state;
       updateSunburst();
-      filterBarTracesByTier("barplots-plot", BARPLOTS_DATA, state);
+      updateBarplots();
     });
 
     const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, (state) => {

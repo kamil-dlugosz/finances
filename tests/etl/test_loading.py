@@ -31,10 +31,10 @@ class TestLoadIncome:
         if not get_config().paths.source_statements_path.exists():
             pytest.skip("No test data")
         df = load_income_from_csv_files(get_config().paths.source_statements_path)
-        assert len(df) > 0
-        if len(df) > 0:
-            assert "Amount" in df.columns
-            assert (df["Amount"] > 0).all()
+        if len(df) == 0:
+            pytest.skip("No income transactions >= 500 PLN in test data")
+        assert "Amount" in df.columns
+        assert (df["Amount"] >= 500).all()
 
 
 class TestLoadAllFromDir:

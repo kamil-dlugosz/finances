@@ -26,7 +26,7 @@ def _count_csv_rows(path: Path) -> int:
 
 
 CONFIG_DIR = PROJECT_ROOT / "config"
-_CONFIG_FILES = ["hierarchy.yaml", "pipeline.yaml", "custom_tiers.yaml"]
+_CONFIG_FILES = ["hierarchy.yaml", "pipeline.yaml", "custom_tiers.yaml", "dashboard_queries.yaml"]
 
 
 def compute_source_fingerprint(input_dir: Path) -> str:

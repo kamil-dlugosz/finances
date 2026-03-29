@@ -68,8 +68,8 @@ def _build_sunburst_data(
         above = sorted_group[sorted_group[amount_col] >= aggregation_threshold]
         below = sorted_group[sorted_group[amount_col] < aggregation_threshold]
 
-        for idx, tx_row in above.iterrows():
-            tx_id = f"{parent_id}|tx_{idx}"
+        for tx_i, (_, tx_row) in enumerate(above.iterrows()):
+            tx_id = f"{parent_id}|tx_{tx_i}"
             target = tx_row.get("TargetAccount", "")
             title = tx_row.get("Title", "")
             amt = tx_row[amount_col]

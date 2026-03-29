@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from config import get_config, get_tier_tree
+from etl.loading import INCOME_MIN_AMOUNT
 
 
 def create_income_barplot(income_df: pd.DataFrame) -> go.Figure:
@@ -14,18 +15,30 @@ def create_income_barplot(income_df: pd.DataFrame) -> go.Figure:
 
     df = income_df.copy()
     df["Period"] = df[date_col].dt.to_period("M").apply(lambda r: r.start_time.date())
-    agg = df.groupby("Period")[amount_col].sum().reset_index().sort_values("Period")
 
-    fig = go.Figure(go.Bar(
-        x=agg["Period"].astype(str),
-        y=agg[amount_col],
-        name="Income",
-    ))
+    source_col = "Counterparty" if "Counterparty" in df.columns else "Title"
+    df["_source"] = df[source_col].fillna("Unknown").astype(str)
+
+    agg = df.groupby(["Period", "_source"])[amount_col].sum().reset_index()
+    sources = sorted(agg["_source"].unique())
+
+    fig = go.Figure()
+    for src in sources:
+        subset = agg[agg["_source"] == src].sort_values("Period")
+        fig.add_trace(go.Bar(
+            x=subset["Period"].astype(str),
+            y=subset[amount_col],
+            name=src,
+            hovertemplate="%{x}<br>" + src + ": %{y:,.2f} PLN<extra></extra>",
+        ))
+
     fig.update_layout(
-        title="Income Over Time",
+        barmode="stack",
+        title=f"Income Over Time (by source, \u2265 {INCOME_MIN_AMOUNT:,.0f} PLN)",
         xaxis_title="Period",
         yaxis_title="Amount (PLN)",
         margin=dict(t=50, l=40, r=20, b=40),
+        legend=dict(font=dict(size=10)),
     )
     return fig
 

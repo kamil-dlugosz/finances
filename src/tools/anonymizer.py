@@ -55,9 +55,12 @@ def _anonymize(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
         if col not in df.columns:
             continue
         parsed = pd.to_datetime(df[col], format="%d.%m.%Y", errors="coerce")
+        valid = parsed.notna()
         jitter_days = rng.integers(-5, 6, size=len(df))
-        shifted = parsed + pd.to_timedelta(jitter_days, unit="D")
+        shifted = parsed.copy()
+        shifted[valid] = parsed[valid] + pd.to_timedelta(jitter_days[valid], unit="D")
         df[col] = shifted.dt.strftime("%d.%m.%Y")
+        df.loc[~valid, col] = ""
 
     for col in float_cols:
         if col not in df.columns:

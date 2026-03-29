@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 import duckdb
 import pandas as pd
@@ -56,81 +55,83 @@ def create_sql_plots(
         return []
 
     con = duckdb.connect(":memory:")
-    con.register("transactions", expense_df)
-    con.register("income", income_df)
+    try:
+        con.register("transactions", expense_df)
+        con.register("income", income_df)
 
-    figures: list[go.Figure] = []
-    granularities = ["year", "quarter", "month", "week"]
+        figures: list[go.Figure] = []
+        granularities = ["year", "quarter", "month", "week"]
 
-    for query_def in queries:
-        if not isinstance(query_def, dict):
-            logger.warning("Skipping non-dict entry in dashboard_queries: %s", type(query_def).__name__)
-            continue
-        name = query_def.get("name", "Unnamed")
-        description = query_def.get("description", "")
-        sql = query_def.get("sql", "")
-        if not sql:
-            continue
-
-        fig = go.Figure()
-        trace_count = 0
-        successful_indices: set[int] = set()
-
-        for idx, gran in enumerate(granularities):
-            result = _run_query_with_granularity(sql, gran, con)
-            if result.empty or len(result.columns) < 2:
-                if not result.empty:
-                    logger.warning("Query '%s' (%s) returned only 1 column — need at least 2", name, gran)
-                fig.add_trace(go.Bar(x=[], y=[], name=gran, visible=False))
-                trace_count += 1
+        for query_def in queries:
+            if not isinstance(query_def, dict):
+                logger.warning("Skipping non-dict entry in dashboard_queries: %s", type(query_def).__name__)
+                continue
+            name = query_def.get("name", "Unnamed")
+            description = query_def.get("description", "")
+            sql = query_def.get("sql", "")
+            if not sql:
                 continue
 
-            x_col = result.columns[0]
-            y_col = result.columns[1]
-            successful_indices.add(idx)
+            fig = go.Figure()
+            trace_count = 0
+            successful_indices: set[int] = set()
 
-            fig.add_trace(go.Bar(
-                x=result[x_col].astype(str),
-                y=result[y_col],
-                name=gran.capitalize(),
-                visible=False,
-            ))
-            trace_count += 1
+            for idx, gran in enumerate(granularities):
+                result = _run_query_with_granularity(sql, gran, con)
+                if result.empty or len(result.columns) < 2:
+                    if not result.empty:
+                        logger.warning("Query '%s' (%s) returned only 1 column — need at least 2", name, gran)
+                    fig.add_trace(go.Bar(x=[], y=[], name=gran, visible=False))
+                    trace_count += 1
+                    continue
 
-        month_idx = granularities.index("month")
-        if month_idx in successful_indices:
-            default_idx = month_idx
-        elif successful_indices:
-            default_idx = min(successful_indices)
-        else:
-            default_idx = None
+                x_col = result.columns[0]
+                y_col = result.columns[1]
+                successful_indices.add(idx)
 
-        if default_idx is not None:
-            fig.data[default_idx].visible = True
+                fig.add_trace(go.Bar(
+                    x=result[x_col].astype(str),
+                    y=result[y_col],
+                    name=gran.capitalize(),
+                    visible=False,
+                ))
+                trace_count += 1
 
-        buttons = []
-        for i, gran in enumerate(granularities):
-            visibility = [False] * trace_count
-            visibility[i] = True
-            buttons.append({
-                "label": gran.capitalize(),
-                "method": "update",
-                "args": [{"visible": visibility}],
-            })
+            month_idx = granularities.index("month")
+            if month_idx in successful_indices:
+                default_idx = month_idx
+            elif successful_indices:
+                default_idx = min(successful_indices)
+            else:
+                default_idx = None
 
-        fig.update_layout(
-            title=f"{name}: {description}",
-            updatemenus=[{
-                "type": "buttons",
-                "direction": "left",
-                "x": 0.0,
-                "y": 1.15,
-                "buttons": buttons,
-                "showactive": True,
-            }],
-            margin=dict(t=80, l=40, r=20, b=40),
-        )
-        figures.append(fig)
+            if default_idx is not None:
+                fig.data[default_idx].visible = True
 
-    con.close()
+            buttons = []
+            for i, gran in enumerate(granularities):
+                visibility = [False] * trace_count
+                visibility[i] = True
+                buttons.append({
+                    "label": gran.capitalize(),
+                    "method": "update",
+                    "args": [{"visible": visibility}],
+                })
+
+            fig.update_layout(
+                title=f"{name}: {description}",
+                updatemenus=[{
+                    "type": "buttons",
+                    "direction": "left",
+                    "x": 0.0,
+                    "y": 1.15,
+                    "buttons": buttons,
+                    "showactive": True,
+                }],
+                margin=dict(t=80, l=40, r=20, b=40),
+            )
+            figures.append(fig)
+    finally:
+        con.close()
+
     return figures

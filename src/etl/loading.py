@@ -9,6 +9,8 @@ from config import get_config
 
 logger = logging.getLogger(__name__)
 
+INCOME_MIN_AMOUNT: float = 500.0
+
 
 def _csv_loading():
     return get_config().csv_loading
@@ -60,9 +62,9 @@ def _load_and_combine(input_dir: Path) -> pd.DataFrame:
 
     ref_col = cfg.column_name_mapping.get("Numer referencyjny", "ReferenceNumber")
     if ref_col in combined.columns:
-        combined = combined.drop_duplicates(subset=[ref_col])
+        combined = combined.drop_duplicates(subset=[ref_col], keep="first")
     else:
-        combined = combined.drop_duplicates()
+        combined = combined.drop_duplicates(keep="first")
 
     return combined
 
@@ -83,11 +85,11 @@ def load_all_csv_files(input_dir: Path) -> pd.DataFrame:
     return combined.reset_index(drop=True)
 
 
-def load_income_from_csv_files(input_dir: Path) -> pd.DataFrame:
-    """Load income transactions: keep rows where raw amount > 0 (credits)."""
+def load_income_from_csv_files(input_dir: Path, min_amount: float = INCOME_MIN_AMOUNT) -> pd.DataFrame:
+    """Load income transactions: keep rows where raw amount >= min_amount (credits)."""
     combined = _load_and_combine(input_dir)
     col = _amount_col()
-    combined = combined[combined[col] > 0]
+    combined = combined[combined[col] >= min_amount]
     return combined.reset_index(drop=True)
 
 
@@ -97,7 +99,7 @@ def load_all_from_dir(input_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     combined = _load_and_combine(input_dir)
     col = _amount_col()
 
-    income_df = combined[combined[col] > 0].reset_index(drop=True)
+    income_df = combined[combined[col] >= INCOME_MIN_AMOUNT].reset_index(drop=True)
 
     expense_combined = combined.copy()
     expense_combined[col] = expense_combined[col] * -1

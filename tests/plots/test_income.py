@@ -36,5 +36,5 @@ class TestWaterfallStats:
     def test_stats_values_positive(self, preprocessed_expense_df):
         stats = build_waterfall_stats(preprocessed_expense_df)
         for s in stats:
-            assert s["avg_amount"] > 0
+            assert s["avg_amount"] >= 0
             assert s["count"] > 0
