@@ -56,6 +56,9 @@ def create_sql_plots(
     granularities = ["year", "quarter", "month", "week"]
 
     for query_def in queries:
+        if not isinstance(query_def, dict):
+            logger.warning("Skipping non-dict entry in dashboard_queries: %s", type(query_def).__name__)
+            continue
         name = query_def.get("name", "Unnamed")
         description = query_def.get("description", "")
         sql = query_def.get("sql", "")

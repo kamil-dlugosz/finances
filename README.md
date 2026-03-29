@@ -90,7 +90,8 @@ python main.py --force
 ```
 
 The cache (`.cache/`) stores preprocessed parquets and a source fingerprint.
-If any source CSV changes (added/removed file, row count change, file size change),
+If any source CSV changes (added/removed file, row count change, file size change)
+or any config YAML changes (`hierarchy.yaml`, `pipeline.yaml`, `custom_tiers.yaml`),
 the cache auto-invalidates on the next run.
 
 ## Anonymizing statements
@@ -136,7 +137,7 @@ PYTHONPATH=src python -m predictions validate
 PYTHONPATH=src python -m predictions propose
 
 # Add a discovered cluster as a custom tier rule
-PYTHONPATH=src python -m predictions add-cluster --tier "Utrzymanie/Wydatki bieżące" --cluster-id 2 --name "Chemia domowa"
+PYTHONPATH=src python -m predictions add-cluster --tier "Utrzymanie/Wydatki bieżące" --n 5 --cluster-id 2 --name "Chemia domowa"
 ```
 
 The `add-cluster` command appends a keyword-matching rule to `config/custom_tiers.yaml`.
@@ -153,9 +154,11 @@ Tests mirror the module structure:
 ```
 tests/
 ├── conftest.py          # shared fixtures
+├── test_main.py         # main entry point tests
 ├── config/              # models, tier tree, loader
 ├── etl/                 # loading, preprocessing, cache
 ├── plots/               # sunburst, barplots, income, sql_plots
-├── predictions/         # clustering, validator, proposals
-└── tools/               # anonymizer, sql_viewer
+├── predictions/         # clustering, validator, proposals, cache
+├── tools/               # anonymizer, sql_viewer
+└── web/                 # HTML renderer
 ```

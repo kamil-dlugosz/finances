@@ -62,7 +62,7 @@
         <div id="waterfall-plot" class="plot-container"></div>
         <h3 style="margin-top:14px;font-size:14px;">Tier Statistics</h3>
         <table class="stats-table" id="waterfall-stats">
-          <thead><tr><th>Tier Path</th><th>Avg Amount</th><th>Transactions</th><th>Total</th></tr></thead>
+          <thead><tr><th>Tier Path</th><th>Avg per Txn</th><th>Transactions</th><th>Total</th></tr></thead>
           <tbody></tbody>
           <tfoot><tr><td><strong>Totals</strong></td><td id="stats-avg-sum"></td><td id="stats-count-sum"></td><td id="stats-total-sum"></td></tr></tfoot>
         </table>
@@ -151,7 +151,7 @@
         countSum += s.count;
         totalSum += s.total;
       });
-      document.getElementById("stats-avg-sum").textContent = avgSum.toFixed(2);
+      document.getElementById("stats-avg-sum").textContent = "—";
       document.getElementById("stats-count-sum").textContent = countSum;
       document.getElementById("stats-total-sum").textContent = totalSum.toFixed(2);
     }
@@ -174,13 +174,12 @@
       if (selectedTiers.size === 0) { renderStats([]); return; }
       const filtered = stats.filter(s => {
         const parts = s.tier_path.split(" → ");
-        const leaf = parts[parts.length - 1];
-        return selectedTiers.has(leaf);
+        return parts.some(p => selectedTiers.has(p));
       });
       renderStats(filtered);
     }
 
-    const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, DIM_VALUES, (state) => {
+    const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, {}, (state) => {
       filterTracesByTier("sunburst-plot", SUNBURST_DATA, state);
       filterTracesByTier("barplots-plot", BARPLOTS_DATA, state);
     });

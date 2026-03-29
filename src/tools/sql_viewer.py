@@ -33,8 +33,12 @@ console = Console()
 def _load_queries_config() -> dict:
     if not QUERIES_PATH.exists():
         return {"dashboard_queries": []}
-    with open(QUERIES_PATH, encoding="utf-8") as f:
-        return yaml.safe_load(f) or {"dashboard_queries": []}
+    try:
+        with open(QUERIES_PATH, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {"dashboard_queries": []}
+    except yaml.YAMLError as exc:
+        console.print(f"[red]Failed to parse {QUERIES_PATH}: {exc}[/red]")
+        return {"dashboard_queries": []}
 
 
 def _save_queries_config(data: dict) -> None:

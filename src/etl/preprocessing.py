@@ -71,12 +71,23 @@ def _apply_custom_tiers(df: pd.DataFrame) -> pd.DataFrame:
         if not keywords:
             continue
 
-        mask = pd.Series(False, index=df.index)
+        tier_path = match.get("tier_path", "")
+        tier_path_segments = tier_path.split("/") if tier_path else []
+
+        scope_mask = pd.Series(True, index=df.index)
+        for i, segment in enumerate(tier_path_segments):
+            col_name = f"Tier{i + 1}"
+            if col_name in df.columns:
+                scope_mask &= df[col_name] == segment
+
+        keyword_mask = pd.Series(False, index=df.index)
         for kw in keywords:
             if title_col in df.columns:
-                mask |= df[title_col].str.lower().str.contains(kw, na=False, regex=False)
+                keyword_mask |= df[title_col].str.lower().str.contains(kw, na=False, regex=False)
             if counterparty_col in df.columns:
-                mask |= df[counterparty_col].str.lower().str.contains(kw, na=False, regex=False)
+                keyword_mask |= df[counterparty_col].str.lower().str.contains(kw, na=False, regex=False)
+
+        mask = scope_mask & keyword_mask
 
         for d in range(1, depth + 1):
             col_name = f"Tier{d}"

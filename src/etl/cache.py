@@ -25,6 +25,10 @@ def _count_csv_rows(path: Path) -> int:
         return max(0, sum(1 for _ in f) - 1)
 
 
+CONFIG_DIR = PROJECT_ROOT / "config"
+_CONFIG_FILES = ["hierarchy.yaml", "pipeline.yaml", "custom_tiers.yaml"]
+
+
 def compute_source_fingerprint(input_dir: Path) -> str:
     manifest: list[dict] = []
     for csv_file in sorted(input_dir.glob("*.csv")):
@@ -34,7 +38,19 @@ def compute_source_fingerprint(input_dir: Path) -> str:
             "row_count": _count_csv_rows(csv_file),
         })
 
-    payload = json.dumps(manifest, sort_keys=True).encode()
+    config_hashes: list[dict] = []
+    for name in _CONFIG_FILES:
+        cfg_path = CONFIG_DIR / name
+        if cfg_path.exists():
+            config_hashes.append({
+                "name": name,
+                "size_bytes": cfg_path.stat().st_size,
+                "sha256": hashlib.sha256(cfg_path.read_bytes()).hexdigest(),
+            })
+
+    payload = json.dumps(
+        {"csv": manifest, "config": config_hashes}, sort_keys=True
+    ).encode()
     return hashlib.sha256(payload).hexdigest()
 
 

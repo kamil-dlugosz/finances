@@ -12,7 +12,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import PROJECT_ROOT
-from etl.cache import load_cache, EXPENSE_PARQUET
+from etl.cache import EXPENSE_PARQUET
 from predictions.clustering import cluster_tier
 from predictions.validator import validate_expense_types
 from predictions.proposals import list_proposals
@@ -69,16 +69,22 @@ def cmd_add_cluster(args: argparse.Namespace) -> None:
     cluster = result.clusters[args.cluster_id]
     tier_parts = args.tier.split("/")
 
+    from config import get_tier_tree
+    depth = get_tier_tree().tier_depth
+    assign: dict[str, str] = {}
+    for i, part in enumerate(tier_parts, 1):
+        assign[f"tier_{i}"] = part
+    assign[f"tier_{len(tier_parts) + 1}"] = args.name
+    for d in range(len(tier_parts) + 2, depth + 1):
+        assign[f"tier_{d}"] = args.name
+
     new_rule = {
         "match": {
             "tier_path": args.tier,
             "keywords": cluster["keywords"],
         },
-        "assign": {},
+        "assign": assign,
     }
-    for i, part in enumerate(tier_parts, 1):
-        new_rule["assign"][f"tier_{i}"] = part
-    new_rule["assign"][f"tier_{len(tier_parts) + 1}"] = args.name
 
     if CUSTOM_TIERS_PATH.exists():
         with open(CUSTOM_TIERS_PATH, encoding="utf-8") as f:
