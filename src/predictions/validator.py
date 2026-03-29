@@ -41,6 +41,9 @@ def validate_expense_types(
     df: pd.DataFrame,
     similarity_threshold: float = 0.05,
 ) -> ValidationReport:
+    """Flag expense types whose TF-IDF title similarity to siblings is below
+    ``similarity_threshold`` (range 0..1; lower means more dissimilar).
+    Default 0.05 is intentionally aggressive — raise to ~0.15 for fewer false positives."""
     expense_col = get_config().preprocessing_columns.expense_type_column
     depth = get_tier_tree().tier_depth
     parent_tier_col = f"Tier{max(1, depth - 1)}"

@@ -49,8 +49,10 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
     )
 
     granularities = ["month", "week", "day"]
+    trace_ranges: dict[str, tuple[int, int]] = {}
 
     for gran in granularities:
+        start_idx = len(fig.data)
         agg = _aggregate_by_time(df, gran, group_col, stack_col)
 
         for col_idx, g in enumerate(group_vals, start=1):
@@ -81,16 +83,15 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
                     )
                     fig.add_trace(trace, row=1, col=col_idx)
 
+        trace_ranges[gran] = (start_idx, len(fig.data))
+
     total_traces = len(fig.data)
-    traces_per_count = total_traces // len(granularities)
-
     buttons = []
-    for i, gran in enumerate(granularities):
+    for gran in granularities:
         visibility = [False] * total_traces
-        start = i * traces_per_count
-        for j in range(traces_per_count):
-            visibility[start + j] = True
-
+        lo, hi = trace_ranges[gran]
+        for j in range(lo, hi):
+            visibility[j] = True
         buttons.append({
             "label": gran.capitalize(),
             "method": "update",

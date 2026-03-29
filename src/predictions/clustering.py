@@ -33,8 +33,18 @@ def cluster_tier(
         data = json.loads(cached)
         return ClusterResult(**data)
 
-    prefix = tier_path.replace("/", "|")
-    mask = df["FullPath"].str.contains(prefix, na=False, regex=False)
+    segments = tier_path.split("/")
+
+    def _matches(full_path: str) -> bool:
+        if pd.isna(full_path):
+            return False
+        parts = full_path.split("|")
+        for i in range(len(parts) - len(segments) + 1):
+            if parts[i : i + len(segments)] == segments:
+                return True
+        return False
+
+    mask = df["FullPath"].map(_matches)
     subset = df[mask].copy()
 
     if subset.empty:

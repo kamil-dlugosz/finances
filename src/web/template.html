@@ -157,23 +157,16 @@
     }
     renderStats(WATERFALL_STATS);
 
-    function filterTraces(plotId, plotData, state, useDims) {
+    function filterTracesByTier(plotId, plotData, state) {
       const selectedTiers = new Set(state.tiers);
-      const indices = [];
-      plotData.data.forEach((trace, i) => {
-        let show = true;
+      const visibility = plotData.data.map(trace => {
         const name = trace.name || "";
         if (selectedTiers.size > 0 && name && !selectedTiers.has(name)) {
-          show = false;
+          return "legendonly";
         }
-        if (show && useDims) {
-          for (const [dimName, vals] of Object.entries(state.dimensions)) {
-            if (vals.length === 0) { show = false; break; }
-          }
-        }
-        indices.push(show);
+        return true;
       });
-      Plotly.restyle(plotId, { visible: indices.map(v => v ? true : "legendonly") });
+      Plotly.restyle(plotId, { visible: visibility });
     }
 
     function filterWaterfallStats(stats, state) {
@@ -181,13 +174,15 @@
       if (selectedTiers.size === 0) { renderStats([]); return; }
       const filtered = stats.filter(s => {
         const parts = s.tier_path.split(" → ");
-        return parts.every(p => selectedTiers.has(p));
+        const leaf = parts[parts.length - 1];
+        return selectedTiers.has(leaf);
       });
       renderStats(filtered);
     }
 
     const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, DIM_VALUES, (state) => {
-      filterTraces("barplots-plot", BARPLOTS_DATA, state, true);
+      filterTracesByTier("sunburst-plot", SUNBURST_DATA, state);
+      filterTracesByTier("barplots-plot", BARPLOTS_DATA, state);
     });
 
     const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, {}, (state) => {

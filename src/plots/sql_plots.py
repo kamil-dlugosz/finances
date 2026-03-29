@@ -18,8 +18,12 @@ QUERIES_PATH = PROJECT_ROOT / "config" / "dashboard_queries.yaml"
 def _load_queries() -> list[dict]:
     if not QUERIES_PATH.exists():
         return []
-    with open(QUERIES_PATH, encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    try:
+        with open(QUERIES_PATH, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except yaml.YAMLError as exc:
+        logger.warning("Failed to parse %s: %s — skipping SQL plots", QUERIES_PATH, exc)
+        return []
     return data.get("dashboard_queries", [])
 
 

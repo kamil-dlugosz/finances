@@ -60,7 +60,7 @@ def cmd_add_cluster(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     df = _load_expense_df()
-    result = cluster_tier(df, args.tier, max(args.cluster_id + 1, 2), args.seed)
+    result = cluster_tier(df, args.tier, args.n, args.seed)
 
     if args.cluster_id >= len(result.clusters):
         logger.error("Cluster ID %d not found (max: %d)", args.cluster_id, len(result.clusters) - 1)
@@ -126,6 +126,7 @@ def main() -> None:
 
     p_add = sub.add_parser("add-cluster", help="Add a cluster as a custom tier rule")
     p_add.add_argument("--tier", required=True, help='Tier path, e.g. "Utrzymanie/Wydatki bieżące"')
+    p_add.add_argument("--n", type=int, required=True, help="Number of clusters (must match the cluster run)")
     p_add.add_argument("--cluster-id", type=int, required=True, help="Cluster ID to add (>= 0)")
     p_add.add_argument("--name", required=True, help="Name for the new sub-tier")
     p_add.add_argument("--seed", type=int, default=42, help="Random seed")

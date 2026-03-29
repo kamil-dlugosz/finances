@@ -138,10 +138,12 @@ def _add_transaction_label(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_transaction_hover(df: pd.DataFrame) -> pd.DataFrame:
+    from html import escape
     skip = {"TransactionLabel", "TransactionHover", "FullPath"}
     hover_cols = [c for c in df.columns if c not in skip]
     df["TransactionHover"] = df[hover_cols].apply(
-        lambda row: "<br>".join(f"{c}: {row[c]}" for c in hover_cols), axis=1
+        lambda row: "<br>".join(f"{c}: {escape(str(row[c]))}" for c in hover_cols),
+        axis=1,
     )
     return df
 

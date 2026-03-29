@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-import pandas as pd
+import logging
 from pathlib import Path
 
+import pandas as pd
+
 from config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 def _csv_loading():
@@ -14,16 +18,28 @@ def _load_single_csv(csv_path: Path) -> pd.DataFrame:
     cfg = _csv_loading()
     df = pd.read_csv(csv_path, sep=";", decimal=",", dtype=str, encoding="utf-8")
 
+    required_cols = set(cfg.date_type_columns) | set(cfg.float_type_columns)
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"{csv_path.name}: missing required columns {missing}")
+
     for column in cfg.date_type_columns:
-        df[column] = pd.to_datetime(df[column], format="%d.%m.%Y")
+        parsed = pd.to_datetime(df[column], format="%d.%m.%Y", errors="coerce")
+        n_bad = parsed.isna().sum() - df[column].isna().sum()
+        if n_bad > 0:
+            logger.warning("%s: %d unparseable dates in column '%s'", csv_path.name, n_bad, column)
+        df[column] = parsed
 
     for column in cfg.float_type_columns:
-        df[column] = (
+        cleaned = (
             df[column]
             .str.replace(",", ".", regex=False)
             .str.replace(r"\s+", "", regex=True)
-            .astype(float)
         )
+        df[column] = pd.to_numeric(cleaned, errors="coerce")
+        n_bad = df[column].isna().sum() - cleaned.isna().sum()
+        if n_bad > 0:
+            logger.warning("%s: %d non-numeric values in column '%s'", csv_path.name, n_bad, column)
 
     return df
 
@@ -53,6 +69,8 @@ def _load_and_combine(input_dir: Path) -> pd.DataFrame:
 
 def _amount_col() -> str:
     cfg = _csv_loading()
+    if not cfg.float_type_columns:
+        raise ValueError("No float_type_columns defined in csv_loading config")
     return cfg.column_name_mapping.get(cfg.float_type_columns[0], cfg.float_type_columns[0])
 
 
