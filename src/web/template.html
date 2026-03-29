@@ -134,6 +134,20 @@
     function renderStats(stats) {
       const tbody = document.querySelector("#waterfall-stats tbody");
       tbody.innerHTML = "";
+      if (stats.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.style.textAlign = "center";
+        td.style.color = "#888";
+        td.textContent = "No tiers selected — check the legend to see stats.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        document.getElementById("stats-avg-sum").textContent = "—";
+        document.getElementById("stats-count-sum").textContent = "—";
+        document.getElementById("stats-total-sum").textContent = "—";
+        return;
+      }
       let avgSum = 0, countSum = 0, totalSum = 0;
       stats.forEach(s => {
         const tr = document.createElement("tr");
@@ -157,7 +171,7 @@
     }
     renderStats(WATERFALL_STATS);
 
-    function filterTracesByTier(plotId, plotData, state) {
+    function filterBarTracesByTier(plotId, plotData, state) {
       const selectedTiers = new Set(state.tiers);
       const visibility = plotData.data.map(trace => {
         const name = trace.name || "";
@@ -167,6 +181,50 @@
         return true;
       });
       Plotly.restyle(plotId, { visible: visibility });
+    }
+
+    function filterSunburst(state) {
+      const selectedTiers = new Set(state.tiers);
+      const trace = SUNBURST_DATA.data[0];
+      if (!trace || !trace.ids) return;
+      const allIds = trace.ids;
+      const allParents = trace.parents;
+      const allLabels = trace.labels;
+      const allValues = trace.values;
+      const allHovers = trace.hovertext || [];
+
+      if (selectedTiers.size === 0) {
+        Plotly.restyle("sunburst-plot", {
+          ids: [[]], parents: [[]], labels: [[]], values: [[]], hovertext: [[]]
+        });
+        return;
+      }
+
+      const keep = new Set();
+      for (let i = 0; i < allIds.length; i++) {
+        const segments = allIds[i].split("|");
+        if (segments.some(s => selectedTiers.has(s))) {
+          let path = "";
+          for (const seg of segments) {
+            path = path ? path + "|" + seg : seg;
+            keep.add(path);
+          }
+        }
+      }
+
+      const ids = [], parents = [], labels = [], values = [], hovers = [];
+      for (let i = 0; i < allIds.length; i++) {
+        if (keep.has(allIds[i])) {
+          ids.push(allIds[i]);
+          parents.push(allParents[i]);
+          labels.push(allLabels[i]);
+          values.push(allValues[i]);
+          hovers.push(allHovers[i] || "");
+        }
+      }
+      Plotly.restyle("sunburst-plot", {
+        ids: [ids], parents: [parents], labels: [labels], values: [values], hovertext: [hovers]
+      });
     }
 
     function filterWaterfallStats(stats, state) {
@@ -180,8 +238,8 @@
     }
 
     const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, {}, (state) => {
-      filterTracesByTier("sunburst-plot", SUNBURST_DATA, state);
-      filterTracesByTier("barplots-plot", BARPLOTS_DATA, state);
+      filterSunburst(state);
+      filterBarTracesByTier("barplots-plot", BARPLOTS_DATA, state);
     });
 
     const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, {}, (state) => {

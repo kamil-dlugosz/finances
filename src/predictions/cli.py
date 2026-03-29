@@ -88,7 +88,8 @@ def cmd_add_cluster(args: argparse.Namespace) -> None:
 
     if CUSTOM_TIERS_PATH.exists():
         with open(CUSTOM_TIERS_PATH, encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
+            raw = yaml.safe_load(f)
+        data = raw if isinstance(raw, dict) else {}
     else:
         data = {}
 

@@ -57,14 +57,20 @@ def compute_source_fingerprint(input_dir: Path) -> str:
 def _read_stored_fingerprint() -> str | None:
     if not FINGERPRINT_FILE.exists():
         return None
-    data = json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
     return data.get("fingerprint")
 
 
 def get_cache_metadata() -> dict | None:
     if not FINGERPRINT_FILE.exists():
         return None
-    return json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
+    try:
+        return json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def is_cache_valid(input_dir: Path) -> bool:

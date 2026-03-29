@@ -30,8 +30,11 @@ def cluster_tier(
     cache_key = f"cluster_{tier_path.replace('/', '_')}_{n_clusters}_{seed}"
     cached = load_prediction_cache(cache_key)
     if cached:
-        data = json.loads(cached)
-        return ClusterResult(**data)
+        try:
+            data = json.loads(cached)
+            return ClusterResult(**data)
+        except (json.JSONDecodeError, TypeError, KeyError) as exc:
+            logger.warning("Corrupt prediction cache for '%s': %s — recomputing", cache_key, exc)
 
     segments = tier_path.split("/")
 

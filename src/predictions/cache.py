@@ -26,7 +26,10 @@ def _preprocessed_fingerprint() -> str:
 def is_prediction_cache_valid() -> bool:
     if not PRED_FINGERPRINT.exists():
         return False
-    stored = json.loads(PRED_FINGERPRINT.read_text(encoding="utf-8"))
+    try:
+        stored = json.loads(PRED_FINGERPRINT.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
     return stored.get("fingerprint") == _preprocessed_fingerprint()
 
 

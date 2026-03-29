@@ -59,16 +59,19 @@ def render_html(
 
     sql_plots_json = "[" + ",".join(_fig_to_json(f) for f in sql_plot_figs) + "]"
 
+    def _safe_json(raw: str) -> str:
+        return raw.replace("</", "<\\/")
+
     replacements = {
         "{{LEGEND_JS}}": legend_js,
-        "{{SUNBURST_JSON}}": _fig_to_json(sunburst_fig),
-        "{{BARPLOTS_JSON}}": _fig_to_json(barplots_fig),
-        "{{INCOME_JSON}}": _fig_to_json(income_fig),
-        "{{WATERFALL_JSON}}": _fig_to_json(waterfall_fig),
-        "{{SQL_PLOTS_JSON}}": sql_plots_json,
-        "{{TIER_TREE_JSON}}": tier_tree_json,
-        "{{DIM_VALUES_JSON}}": dim_values_json,
-        "{{WATERFALL_STATS_JSON}}": waterfall_stats_json,
+        "{{SUNBURST_JSON}}": _safe_json(_fig_to_json(sunburst_fig)),
+        "{{BARPLOTS_JSON}}": _safe_json(_fig_to_json(barplots_fig)),
+        "{{INCOME_JSON}}": _safe_json(_fig_to_json(income_fig)),
+        "{{WATERFALL_JSON}}": _safe_json(_fig_to_json(waterfall_fig)),
+        "{{SQL_PLOTS_JSON}}": _safe_json(sql_plots_json),
+        "{{TIER_TREE_JSON}}": _safe_json(tier_tree_json),
+        "{{DIM_VALUES_JSON}}": _safe_json(dim_values_json),
+        "{{WATERFALL_STATS_JSON}}": _safe_json(waterfall_stats_json),
         "{{CACHE_INFO}}": _build_cache_info(),
     }
 

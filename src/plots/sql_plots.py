@@ -24,6 +24,9 @@ def _load_queries() -> list[dict]:
     except yaml.YAMLError as exc:
         logger.warning("Failed to parse %s: %s — skipping SQL plots", QUERIES_PATH, exc)
         return []
+    if not isinstance(data, dict):
+        logger.warning("Expected mapping in %s, got %s — skipping", QUERIES_PATH, type(data).__name__)
+        return []
     return data.get("dashboard_queries", [])
 
 
@@ -70,13 +73,15 @@ def create_sql_plots(
 
         for gran in granularities:
             result = _run_query_with_granularity(sql, gran, con)
-            if result.empty:
+            if result.empty or len(result.columns) < 2:
+                if not result.empty:
+                    logger.warning("Query '%s' (%s) returned only 1 column — need at least 2", name, gran)
                 fig.add_trace(go.Bar(x=[], y=[], name=gran, visible=False))
                 trace_count += 1
                 continue
 
             x_col = result.columns[0]
-            y_col = result.columns[1] if len(result.columns) > 1 else result.columns[0]
+            y_col = result.columns[1]
 
             fig.add_trace(go.Bar(
                 x=result[x_col].astype(str),

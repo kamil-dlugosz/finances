@@ -35,10 +35,14 @@ def _load_queries_config() -> dict:
         return {"dashboard_queries": []}
     try:
         with open(QUERIES_PATH, encoding="utf-8") as f:
-            return yaml.safe_load(f) or {"dashboard_queries": []}
+            raw = yaml.safe_load(f)
     except yaml.YAMLError as exc:
         console.print(f"[red]Failed to parse {QUERIES_PATH}: {exc}[/red]")
         return {"dashboard_queries": []}
+    if not isinstance(raw, dict):
+        console.print(f"[red]Expected mapping in {QUERIES_PATH}, got {type(raw).__name__}[/red]")
+        return {"dashboard_queries": []}
+    return raw
 
 
 def _save_queries_config(data: dict) -> None:
