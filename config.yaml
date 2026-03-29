@@ -1,5 +1,6 @@
 paths:
-  "source_statements_path": "statements/bank"
+  "source_statements_path": "statements/anonymized"
+#  "source_statements_path": "statements/bank"
   "preprocessed_statements_path": "statements/preprocessed"
 
 csv_loading:
@@ -24,11 +25,16 @@ csv_loading:
     "Typ operacji": "OperationType"
     "Kategoria": "ExpenseType"
 
-date_stamp_column: "PostingDate"
-expense_type_column: "ExpenseType"
+preprocessing_columns:
+  date_stamp_column: "PostingDate"
+  amount_column: "Amount"
+  expense_type_column: "ExpenseType"
 
-labeling:
-  category_structure:
+hierarchy:
+  dimensions:
+    - "Year"
+    - "Month"
+  tiers:
     "Utrzymanie":
       "Zdrowie":
         - "Lekarstwa"
