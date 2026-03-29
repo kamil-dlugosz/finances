@@ -59,7 +59,7 @@ def _format_sql(sql: str) -> str:
     ).strip()
 
 
-def _display_result(result: duckdb.DuckDBPyRelation, con: duckdb.DuckDBPyConnection) -> None:
+def _display_result(result: duckdb.DuckDBPyRelation) -> None:
     columns = [desc[0] for desc in result.description]
     rows = result.fetchall()
 
@@ -101,6 +101,9 @@ def _cmd_save(name: str, last_sql: str) -> None:
     formatted = _format_sql(last_sql)
     data = _load_queries_config()
     queries = data.get("dashboard_queries", [])
+    if not isinstance(queries, list):
+        console.print("[yellow]dashboard_queries is not a list — starting fresh[/yellow]")
+        queries = []
 
     for q in queries:
         if not isinstance(q, dict):
@@ -124,14 +127,17 @@ def _cmd_save(name: str, last_sql: str) -> None:
 
 def _cmd_load(name: str) -> str | None:
     data = _load_queries_config()
-    for q in data.get("dashboard_queries", []):
-        if q.get("name") == name:
+    queries = data.get("dashboard_queries", [])
+    if not isinstance(queries, list):
+        queries = []
+    for q in queries:
+        if isinstance(q, dict) and q.get("name") == name:
             sql = q.get("sql", "")
             console.print(f"[green]Loaded '{name}':[/green]")
             console.print(f"[dim]{sql}[/dim]")
             return sql
     console.print(f"[yellow]Query '{name}' not found.[/yellow]")
-    available = [q.get("name") for q in data.get("dashboard_queries", [])]
+    available = [q.get("name") for q in queries if isinstance(q, dict)]
     if available:
         console.print(f"[dim]Available: {', '.join(available)}[/dim]")
     return None
@@ -185,7 +191,7 @@ def main() -> None:
 
         try:
             result = con.execute(line)
-            _display_result(result, con)
+            _display_result(result)
             last_sql = line
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")

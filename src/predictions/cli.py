@@ -94,6 +94,9 @@ def cmd_add_cluster(args: argparse.Namespace) -> None:
         data = {}
 
     rules = data.get("custom_tiers", [])
+    if not isinstance(rules, list):
+        logger.warning("Expected list for 'custom_tiers', got %s — starting fresh", type(rules).__name__)
+        rules = []
     existing = [
         r for r in rules
         if isinstance(r, dict)

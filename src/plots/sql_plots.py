@@ -27,7 +27,11 @@ def _load_queries() -> list[dict]:
     if not isinstance(data, dict):
         logger.warning("Expected mapping in %s, got %s — skipping", QUERIES_PATH, type(data).__name__)
         return []
-    return data.get("dashboard_queries", [])
+    queries = data.get("dashboard_queries", [])
+    if not isinstance(queries, list):
+        logger.warning("Expected list for 'dashboard_queries' in %s, got %s", QUERIES_PATH, type(queries).__name__)
+        return []
+    return queries
 
 
 def _run_query_with_granularity(

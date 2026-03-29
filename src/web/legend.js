@@ -64,17 +64,16 @@ class HierarchicalLegend {
     return ul;
   }
 
-  _createCheckbox(id, labelText, checked) {
+  _createCheckbox(mapKey, labelText, checked) {
     const wrapper = document.createElement("label");
     wrapper.style.cssText = "display:inline-flex;align-items:center;margin-right:8px;cursor:pointer;gap:3px;";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.checked = checked;
-    input.id = id;
     input.addEventListener("change", () => this._fireChange());
     wrapper.appendChild(input);
     wrapper.appendChild(document.createTextNode(labelText));
-    this.checkboxes[id] = input;
+    this.checkboxes[mapKey] = input;
     return { wrapper, input };
   }
 
@@ -99,14 +98,12 @@ class HierarchicalLegend {
   }
 
   getState() {
-    const tiers = [];
-    for (const [id, cb] of Object.entries(this.checkboxes)) {
-      if (id.startsWith("tier::") && cb.checked) {
-        const path = id.slice(6);
-        const leaf = path.includes("/") ? path.split("/").pop() : path;
-        tiers.push(leaf);
+    const tierSet = new Set();
+    for (const [key, cb] of Object.entries(this.checkboxes)) {
+      if (key.startsWith("tier::") && cb.checked) {
+        for (const seg of key.slice(6).split("/")) tierSet.add(seg);
       }
     }
-    return { tiers };
+    return { tiers: Array.from(tierSet) };
   }
 }

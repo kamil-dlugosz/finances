@@ -114,18 +114,29 @@
       catch(e) { console.error("Failed to parse data from #" + id + ":", e); return null; }
     }
 
-    const SUNBURST_META = loadData("data-sunburst-frames");
+    const _required = ["data-sunburst-frames","data-barplots","data-income","data-waterfall","data-tier-tree"];
+    const _loaded = {};
+    let _loadError = false;
+    _required.forEach(id => { _loaded[id] = loadData(id); if (!_loaded[id]) _loadError = true; });
+    if (_loadError) {
+      document.querySelector(".main-content").innerHTML =
+        '<div style="padding:40px;color:#c00;font-size:16px;">Dashboard data failed to load. ' +
+        'Try regenerating with <code>python main.py --force</code>.</div>';
+      throw new Error("Critical dashboard data missing — aborting.");
+    }
+
+    const SUNBURST_META = _loaded["data-sunburst-frames"];
     const SUNBURST_FRAMES = SUNBURST_META.frames;
     const SUNBURST_THRESHOLDS = SUNBURST_META.thresholds;
     const MAX_SUNBURST_DEPTH = SUNBURST_META.max_depth;
     const SUNBURST_LAYOUT = {margin: {t: 40, l: 20, r: 20, b: 20}};
 
-    const BARPLOTS_DATA = loadData("data-barplots");
-    const INCOME_DATA = loadData("data-income");
-    const WATERFALL_DATA = loadData("data-waterfall");
-    const SQL_PLOTS_DATA = loadData("data-sql-plots");
-    const TIER_TREE = loadData("data-tier-tree");
-    const WATERFALL_STATS = loadData("data-waterfall-stats");
+    const BARPLOTS_DATA = _loaded["data-barplots"];
+    const INCOME_DATA = _loaded["data-income"];
+    const WATERFALL_DATA = _loaded["data-waterfall"];
+    const SQL_PLOTS_DATA = loadData("data-sql-plots") || [];
+    const TIER_TREE = _loaded["data-tier-tree"];
+    const WATERFALL_STATS = loadData("data-waterfall-stats") || [];
 
     /* --- Sunburst: slider + tier filter --- */
     let currentThresholdIdx = 3;
