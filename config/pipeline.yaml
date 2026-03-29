@@ -1,0 +1,30 @@
+paths:
+  source_statements_raw_path: "resources/statements/bank"
+  source_statements_path: "resources/statements/anonymized"
+
+csv_loading:
+  date_type_columns:
+    - "Data księgowania"
+    - "Data waluty"
+
+  float_type_columns:
+    - "Kwota operacji"
+
+  column_name_mapping:
+    "Data księgowania": "PostingDate"
+    "Data waluty": "ValueDate"
+    "Nadawca / Odbiorca": "Counterparty"
+    "Adres nadawcy / odbiorcy": "CounterpartyAddress"
+    "Rachunek źródłowy": "SourceAccount"
+    "Rachunek docelowy": "TargetAccount"
+    "Tytułem": "Title"
+    "Kwota operacji": "Amount"
+    "Waluta": "Currency"
+    "Numer referencyjny": "ReferenceNumber"
+    "Typ operacji": "OperationType"
+    "Kategoria": "ExpenseType"
+
+preprocessing_columns:
+  date_stamp_column: "PostingDate"
+  amount_column: "Amount"
+  expense_type_column: "ExpenseType"

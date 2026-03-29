@@ -1,0 +1,67 @@
+dimensions:
+  - "Year"
+  - "Month"
+
+tiers:
+  "Utrzymanie":
+    "Zdrowie":
+      - "Lekarstwa"
+      - "Opieka medyczna"
+    "Transport":
+      - "Paliwo"
+      - "Transport publiczny"
+      - "Taxi"
+      - "Bilety lotnicze"
+    "Rachunki":
+      - "Czynsz"
+      - "Internet, TV, telefon"
+      - "Ubezpieczenia"
+      - "Prąd"
+    "Wydatki bieżące":
+      - "Artykuły spożywcze"
+      - "Kosmetyki"
+      - "Zwierzęta domowe"
+      - "Uroda, fryzjer, kosmetyczka"
+      - "Fotografia"
+      - "Zakupy przez internet"
+      - "Alkohol"
+      - "Papierosy"
+    "Podatki i opłaty":
+      - "Opłaty bankowe"
+    "Obciążenia wewnętrzne":
+      - "Przelew wewnętrzny"
+      - "Założenie lokaty, zakup funduszy, akcji"
+      - "Spłata kredytu / pożyczki"
+  "Widzi-mi-się":
+    "Odzież i dodatki":
+      - "Dodatki, biżuteria"
+      - "Ubrania"
+      - "Usługi (pralnia, krawiec, szewc,...)"
+    "Dom":
+      - "Artykuły dekoracyjne"
+      - "Naprawy i remonty"
+      - "Wyposażenie"
+      - "Sprzęt AGD i RTV"
+      - "Ogród"
+      - "Sprzątanie"
+    "Rozrywka i wypoczynek":
+      - "Restauracje i kawiarnie"
+      - "Multimedia"
+      - "Sport"
+      - "Podróże"
+      - "Puby i kluby"
+      - "Gazety lub czasopisma"
+      - "Kino i teatr"
+      - "Hobby"
+      - "Hotele"
+      - "Książki"
+    "Dla innych":
+      - "Prezenty, upominki"
+  "Inne":
+    "Inne":
+      - "Inne"
+      - "Wypłata z bankomatu"
+      - "Wypłata z rachunku"
+  "Bez kategorii":
+    "Bez kategorii":
+      - "Bez kategorii"

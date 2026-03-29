@@ -1,5 +1,8 @@
 # Project related
-statements/
+resources/
+.cache/
+.agent/
+dist/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

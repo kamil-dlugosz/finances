@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from config import get_config, get_tier_tree
+
+
+def _aggregate_by_time(
+    df: pd.DataFrame,
+    granularity: str,
+    group_col: str,
+    stack_col: str,
+) -> pd.DataFrame:
+    date_col = get_config().preprocessing_columns.date_stamp_column
+    amount_col = get_config().preprocessing_columns.amount_column
+
+    df = df.copy()
+    if granularity == "day":
+        df["Period"] = df[date_col].dt.date
+    elif granularity == "week":
+        df["Period"] = df[date_col].dt.to_period("W").apply(lambda r: r.start_time.date())
+    elif granularity == "month":
+        df["Period"] = df[date_col].dt.to_period("M").apply(lambda r: r.start_time.date())
+    else:
+        raise ValueError(f"Unknown granularity: {granularity}")
+
+    grouped = df.groupby([group_col, stack_col, "Period"])[amount_col].sum().reset_index()
+    return grouped
+
+
+def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
+    amount_col = get_config().preprocessing_columns.amount_column
+    depth = get_tier_tree().tier_depth
+    group_col = "Tier1"
+    stack_col = f"Tier{min(2, depth)}"
+
+    group_vals = sorted(df[group_col].dropna().unique())
+    n_cols = max(len(group_vals), 1)
+
+    fig = make_subplots(
+        rows=1,
+        cols=n_cols,
+        subplot_titles=group_vals,
+        shared_yaxes=True,
+    )
+
+    granularities = ["month", "week", "day"]
+
+    for gran in granularities:
+        agg = _aggregate_by_time(df, gran, group_col, stack_col)
+
+        for col_idx, g in enumerate(group_vals, start=1):
+            g_data = agg[agg[group_col] == g]
+            stack_vals = sorted(g_data[stack_col].dropna().unique())
+
+            for sv in stack_vals:
+                subset = g_data[g_data[stack_col] == sv].sort_values("Period")
+                trace = go.Bar(
+                    x=subset["Period"].astype(str),
+                    y=subset[amount_col],
+                    name=sv,
+                    legendgroup=sv,
+                    showlegend=(col_idx == 1),
+                    visible=(gran == "month"),
+                )
+                fig.add_trace(trace, row=1, col=col_idx)
+
+    total_traces = len(fig.data)
+    traces_per_count = total_traces // len(granularities)
+
+    buttons = []
+    for i, gran in enumerate(granularities):
+        visibility = [False] * total_traces
+        start = i * traces_per_count
+        for j in range(traces_per_count):
+            visibility[start + j] = True
+
+        buttons.append({
+            "label": gran.capitalize(),
+            "method": "update",
+            "args": [{"visible": visibility}],
+        })
+
+    fig.update_layout(
+        barmode="stack",
+        updatemenus=[{
+            "type": "buttons",
+            "direction": "left",
+            "x": 0.0,
+            "y": 1.15,
+            "buttons": buttons,
+            "showactive": True,
+        }],
+        margin=dict(t=80, l=40, r=20, b=40),
+        height=500,
+    )
+
+    return fig

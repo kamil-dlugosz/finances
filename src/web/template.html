@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finances Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    .dashboard { display: flex; min-height: 100vh; }
+    .sidebar { width: 280px; min-width: 280px; background: #fff; border-right: 1px solid #ddd; padding: 16px; overflow-y: auto; }
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 20px; }
+    .section h2 { font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid #4a90d9; padding-bottom: 6px; }
+    .plot-container { width: 100%; }
+    .stats-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+    .stats-table th { background: #f0f0f0; font-weight: 600; }
+    .stats-table tfoot td { font-weight: 700; background: #f8f8f0; }
+    .footer { text-align: center; padding: 12px; font-size: 12px; color: #888; border-top: 1px solid #eee; margin-top: 20px; }
+    .footer button { margin-left: 10px; padding: 4px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    .footer button:hover { background: #eee; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #fff; border-radius: 8px; padding: 24px; max-width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .modal h3 { margin-bottom: 12px; }
+    .modal code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 14px; }
+    .modal button { margin-top: 14px; padding: 6px 20px; cursor: pointer; border: 1px solid #999; border-radius: 4px; }
+    .sidebar h3 { font-size: 15px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="sidebar">
+      <h3>Expense Filters</h3>
+      <div id="expense-legend"></div>
+      <h3 style="margin-top:20px;">Income / Waterfall Filters</h3>
+      <div id="income-legend"></div>
+    </div>
+
+    <div class="main-content">
+      <!-- Section 1: Sunburst -->
+      <div class="section">
+        <h2>Expense Sunburst</h2>
+        <div id="sunburst-plot" class="plot-container"></div>
+      </div>
+
+      <!-- Section 2: Hierarchical Bar Plots -->
+      <div class="section">
+        <h2>Expense Breakdown by Time</h2>
+        <div id="barplots-plot" class="plot-container"></div>
+      </div>
+
+      <!-- Section 3: Income & Waterfall -->
+      <div class="section">
+        <h2>Income</h2>
+        <div id="income-plot" class="plot-container"></div>
+      </div>
+      <div class="section">
+        <h2>Income vs Expenses</h2>
+        <div id="waterfall-plot" class="plot-container"></div>
+        <h3 style="margin-top:14px;font-size:14px;">Tier Statistics</h3>
+        <table class="stats-table" id="waterfall-stats">
+          <thead><tr><th>Tier Path</th><th>Avg Amount</th><th>Transactions</th><th>Total</th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><td><strong>Sum of Averages</strong></td><td id="stats-avg-sum"></td><td id="stats-count-sum"></td><td id="stats-total-sum"></td></tr></tfoot>
+        </table>
+      </div>
+
+      <!-- Section 4: SQL-Driven Plots -->
+      <div class="section" id="sql-plots-section">
+        <h2>Custom Query Plots</h2>
+        <!-- SQL plot divs injected here -->
+      </div>
+
+      <div class="footer">
+        <span id="cache-info">{{CACHE_INFO}}</span>
+        <button onclick="document.getElementById('recompute-modal').classList.add('active')">Force Recompute</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="recompute-modal">
+    <div class="modal">
+      <h3>Force Recompute</h3>
+      <p>Cache is managed by Python. Run:</p>
+      <p style="margin-top:8px;"><code>python main.py --force</code></p>
+      <button onclick="document.getElementById('recompute-modal').classList.remove('active')">Close</button>
+    </div>
+  </div>
+
+  <!-- Legend JS -->
+  <script>
+{{LEGEND_JS}}
+  </script>
+
+  <script type="application/json" id="data-sunburst">{{SUNBURST_JSON}}</script>
+  <script type="application/json" id="data-barplots">{{BARPLOTS_JSON}}</script>
+  <script type="application/json" id="data-income">{{INCOME_JSON}}</script>
+  <script type="application/json" id="data-waterfall">{{WATERFALL_JSON}}</script>
+  <script type="application/json" id="data-sql-plots">{{SQL_PLOTS_JSON}}</script>
+  <script type="application/json" id="data-tier-tree">{{TIER_TREE_JSON}}</script>
+  <script type="application/json" id="data-dim-values">{{DIM_VALUES_JSON}}</script>
+  <script type="application/json" id="data-waterfall-stats">{{WATERFALL_STATS_JSON}}</script>
+
+  <script>
+    function loadData(id) { return JSON.parse(document.getElementById(id).textContent); }
+
+    const SUNBURST_DATA = loadData("data-sunburst");
+    const BARPLOTS_DATA = loadData("data-barplots");
+    const INCOME_DATA = loadData("data-income");
+    const WATERFALL_DATA = loadData("data-waterfall");
+    const SQL_PLOTS_DATA = loadData("data-sql-plots");
+    const TIER_TREE = loadData("data-tier-tree");
+    const DIM_VALUES = loadData("data-dim-values");
+    const WATERFALL_STATS = loadData("data-waterfall-stats");
+
+    Plotly.newPlot("sunburst-plot", SUNBURST_DATA.data, SUNBURST_DATA.layout, {responsive: true});
+    Plotly.newPlot("barplots-plot", BARPLOTS_DATA.data, BARPLOTS_DATA.layout, {responsive: true});
+    Plotly.newPlot("income-plot", INCOME_DATA.data, INCOME_DATA.layout, {responsive: true});
+    Plotly.newPlot("waterfall-plot", WATERFALL_DATA.data, WATERFALL_DATA.layout, {responsive: true});
+
+    const sqlSection = document.getElementById("sql-plots-section");
+    SQL_PLOTS_DATA.forEach((plotData, i) => {
+      const div = document.createElement("div");
+      div.id = "sql-plot-" + i;
+      div.className = "plot-container";
+      div.style.marginTop = "12px";
+      sqlSection.appendChild(div);
+      Plotly.newPlot(div.id, plotData.data, plotData.layout, {responsive: true});
+    });
+
+    function renderStats(stats) {
+      const tbody = document.querySelector("#waterfall-stats tbody");
+      tbody.innerHTML = "";
+      let avgSum = 0, countSum = 0, totalSum = 0;
+      stats.forEach(s => {
+        const tr = document.createElement("tr");
+        const tdPath = document.createElement("td");
+        tdPath.textContent = s.tier_path;
+        const tdAvg = document.createElement("td");
+        tdAvg.textContent = s.avg_amount.toFixed(2);
+        const tdCount = document.createElement("td");
+        tdCount.textContent = s.count;
+        const tdTotal = document.createElement("td");
+        tdTotal.textContent = s.total.toFixed(2);
+        tr.append(tdPath, tdAvg, tdCount, tdTotal);
+        tbody.appendChild(tr);
+        avgSum += s.avg_amount;
+        countSum += s.count;
+        totalSum += s.total;
+      });
+      document.getElementById("stats-avg-sum").textContent = avgSum.toFixed(2);
+      document.getElementById("stats-count-sum").textContent = countSum;
+      document.getElementById("stats-total-sum").textContent = totalSum.toFixed(2);
+    }
+    renderStats(WATERFALL_STATS);
+
+    new HierarchicalLegend("expense-legend", TIER_TREE, DIM_VALUES, (state) => {});
+    new HierarchicalLegend("income-legend", TIER_TREE, {}, (state) => {});
+  </script>
+</body>
+</html>
