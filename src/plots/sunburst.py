@@ -93,12 +93,9 @@ def build_sunburst_frames(df: pd.DataFrame) -> dict[float, dict[str, list]]:
 
 
 def create_transaction_sunburst(df: pd.DataFrame) -> go.Figure:
+    """Create a static sunburst figure (useful for standalone usage/tests)."""
     max_depth = len(get_config().hierarchy.dimensions) + get_tier_tree().tier_depth
-
-    frames_data = build_sunburst_frames(df)
-    thresholds = sorted(frames_data.keys())
-
-    default_data = frames_data[thresholds[0]]
+    default_data = _build_sunburst_data(df, aggregation_threshold=50)
 
     fig = go.Figure(go.Sunburst(
         ids=default_data["ids"],
@@ -110,50 +107,16 @@ def create_transaction_sunburst(df: pd.DataFrame) -> go.Figure:
         branchvalues="total",
         maxdepth=max_depth,
     ))
-
-    frames = []
-    for t in thresholds:
-        d = frames_data[t]
-        frames.append(go.Frame(
-            data=[go.Sunburst(
-                ids=d["ids"],
-                labels=d["labels"],
-                parents=d["parents"],
-                values=d["values"],
-                hovertext=d["hovers"],
-                hoverinfo="text",
-                branchvalues="total",
-                maxdepth=max_depth,
-            )],
-            name=str(t),
-        ))
-    fig.frames = frames
-
-    steps = []
-    for t in thresholds:
-        step = {
-            "args": [
-                [str(t)],
-                {"frame": {"duration": 300, "redraw": True}, "mode": "immediate"},
-            ],
-            "label": f"{t:.0f} PLN",
-            "method": "animate",
-        }
-        steps.append(step)
-
-    fig.update_layout(
-        margin=dict(t=40, l=20, r=20, b=80),
-        sliders=[{
-            "active": 0,
-            "currentvalue": {"prefix": "Hide transactions under: "},
-            "steps": steps,
-            "pad": {"t": 30},
-        }],
-    )
-
+    fig.update_layout(margin=dict(t=40, l=20, r=20, b=20))
     return fig
 
 
 def sunburst_data_to_json(df: pd.DataFrame) -> str:
+    """Return JSON with all threshold frames + metadata for client-side rendering."""
     frames_data = build_sunburst_frames(df)
-    return json.dumps({str(k): v for k, v in frames_data.items()})
+    max_depth = len(get_config().hierarchy.dimensions) + get_tier_tree().tier_depth
+    return json.dumps({
+        "max_depth": max_depth,
+        "thresholds": sorted(frames_data.keys()),
+        "frames": {str(int(k)): v for k, v in frames_data.items()},
+    })

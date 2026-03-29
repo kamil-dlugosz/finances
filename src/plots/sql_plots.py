@@ -70,8 +70,9 @@ def create_sql_plots(
 
         fig = go.Figure()
         trace_count = 0
+        default_visible_idx: int | None = None
 
-        for gran in granularities:
+        for idx, gran in enumerate(granularities):
             result = _run_query_with_granularity(sql, gran, con)
             if result.empty or len(result.columns) < 2:
                 if not result.empty:
@@ -83,13 +84,21 @@ def create_sql_plots(
             x_col = result.columns[0]
             y_col = result.columns[1]
 
+            is_default = (gran == "month") if default_visible_idx is None else False
+            if is_default or default_visible_idx is None:
+                default_visible_idx = idx
+
             fig.add_trace(go.Bar(
                 x=result[x_col].astype(str),
                 y=result[y_col],
                 name=gran.capitalize(),
-                visible=(gran == "month"),
+                visible=(idx == default_visible_idx),
             ))
             trace_count += 1
+
+        if default_visible_idx is not None:
+            for i, trace in enumerate(fig.data):
+                trace.visible = (i == default_visible_idx)
 
         buttons = []
         for i, gran in enumerate(granularities):

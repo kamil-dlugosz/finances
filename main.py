@@ -11,7 +11,7 @@ from config import get_config
 from etl.loading import load_all_from_dir
 from etl.preprocessing import preprocess
 from etl.cache import is_cache_valid, load_cache, save_cache
-from plots.sunburst import create_transaction_sunburst
+from plots.sunburst import sunburst_data_to_json
 from plots.barplots import create_hierarchical_barplots
 from plots.income import create_income_barplot, create_waterfall, waterfall_stats_to_json
 from plots.sql_plots import create_sql_plots
@@ -38,7 +38,7 @@ def main() -> None:
         save_cache(expense_df, income_df, source_dir)
 
     logger.info("Building figures")
-    sunburst_fig = create_transaction_sunburst(expense_df)
+    sunburst_frames_json = sunburst_data_to_json(expense_df)
     barplots_fig = create_hierarchical_barplots(expense_df)
     income_fig = create_income_barplot(income_df)
     waterfall_fig = create_waterfall(income_df, expense_df)
@@ -49,7 +49,7 @@ def main() -> None:
     dist_dir.mkdir(exist_ok=True)
 
     output = render_html(
-        sunburst_fig=sunburst_fig,
+        sunburst_frames_json=sunburst_frames_json,
         barplots_fig=barplots_fig,
         income_fig=income_fig,
         waterfall_fig=waterfall_fig,

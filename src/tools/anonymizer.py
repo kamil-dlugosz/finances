@@ -62,12 +62,12 @@ def _anonymize(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     for col in float_cols:
         if col not in df.columns:
             continue
-        values = (
+        values = pd.to_numeric(
             df[col]
             .astype(str)
             .str.replace(r"\s+", "", regex=True)
-            .str.replace(",", ".", regex=False)
-            .astype(float)
+            .str.replace(",", ".", regex=False),
+            errors="coerce",
         )
         noise = rng.normal(loc=0, scale=0.5, size=len(df))
         anonymized = (values + noise).round(2)

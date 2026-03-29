@@ -20,6 +20,8 @@ def _load_yaml(path: Path) -> dict:
         raise RuntimeError(f"Failed to parse YAML file {path}: {exc}")
     if data is None:
         raise RuntimeError(f"Configuration file is empty: {path}")
+    if not isinstance(data, dict):
+        raise RuntimeError(f"Expected mapping in {path}, got {type(data).__name__}")
     return data
 
 

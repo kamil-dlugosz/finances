@@ -103,6 +103,8 @@ def _cmd_save(name: str, last_sql: str) -> None:
     queries = data.get("dashboard_queries", [])
 
     for q in queries:
+        if not isinstance(q, dict):
+            continue
         if q.get("name") == name:
             q["sql"] = formatted
             console.print(f"[green]Updated existing query '{name}'[/green]")

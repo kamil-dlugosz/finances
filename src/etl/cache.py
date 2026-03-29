@@ -61,6 +61,8 @@ def _read_stored_fingerprint() -> str | None:
         data = json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+    if not isinstance(data, dict):
+        return None
     return data.get("fingerprint")
 
 
@@ -68,9 +70,12 @@ def get_cache_metadata() -> dict | None:
     if not FINGERPRINT_FILE.exists():
         return None
     try:
-        return json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
+        data = json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+    if not isinstance(data, dict):
+        return None
+    return data
 
 
 def is_cache_valid(input_dir: Path) -> bool:
@@ -97,15 +102,28 @@ def save_cache(
 ) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    for df_to_save, target in ((expense_df, EXPENSE_PARQUET), (income_df, INCOME_PARQUET)):
-        fd, tmp = tempfile.mkstemp(dir=CACHE_DIR, suffix=".parquet")
-        os.close(fd)
-        try:
+    if FINGERPRINT_FILE.exists():
+        FINGERPRINT_FILE.unlink()
+
+    tmp_paths: list[str] = []
+    targets = [(expense_df, EXPENSE_PARQUET), (income_df, INCOME_PARQUET)]
+    try:
+        for df_to_save, _ in targets:
+            fd, tmp = tempfile.mkstemp(dir=CACHE_DIR, suffix=".parquet")
+            os.close(fd)
+            tmp_paths.append(tmp)
             df_to_save.to_parquet(tmp, index=False)
+
+        for tmp, (_, target) in zip(tmp_paths, targets):
             os.replace(tmp, target)
-        except BaseException:
-            os.unlink(tmp)
-            raise
+        tmp_paths.clear()
+    except BaseException:
+        for tmp in tmp_paths:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+        raise
 
     fingerprint = compute_source_fingerprint(input_dir)
     meta = {

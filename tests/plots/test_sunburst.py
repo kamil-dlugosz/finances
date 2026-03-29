@@ -36,4 +36,3 @@ class TestCreateSunburst:
         fig = create_transaction_sunburst(preprocessed_expense_df)
         assert fig is not None
         assert len(fig.data) > 0
-        assert fig.layout.sliders is not None

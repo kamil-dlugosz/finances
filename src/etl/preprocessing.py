@@ -143,7 +143,7 @@ def _add_transaction_label(df: pd.DataFrame) -> pd.DataFrame:
     amount_col = _preprocessing_columns().amount_column
     target = df.get("TargetAccount", pd.Series("", index=df.index)).fillna("")
     title = df.get("Title", pd.Series("", index=df.index)).fillna("")
-    amount = df[amount_col].map(lambda a: f"{a:.2f}")
+    amount = df[amount_col].map(lambda a: f"{a:.2f}" if pd.notna(a) else "N/A")
     df["TransactionLabel"] = target + " · " + title + " · " + amount + " PLN"
     return df
 
