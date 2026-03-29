@@ -4,7 +4,6 @@ import json
 import logging
 from pathlib import Path
 
-import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 
@@ -39,7 +38,6 @@ def render_html(
     waterfall_fig: go.Figure,
     sql_plot_figs: list[go.Figure],
     waterfall_stats_json: str,
-    expense_df: pd.DataFrame,
     output_path: Path | str = "dist/output.html",
 ) -> Path:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")

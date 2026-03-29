@@ -55,7 +55,6 @@ def main() -> None:
         waterfall_fig=waterfall_fig,
         sql_plot_figs=sql_figs,
         waterfall_stats_json=stats_json,
-        expense_df=expense_df,
         output_path=dist_dir / "output.html",
     )
     logger.info("Dashboard ready: %s", output.resolve())

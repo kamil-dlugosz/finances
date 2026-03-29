@@ -1,8 +1,7 @@
 class HierarchicalLegend {
-  constructor(containerId, tierTree, dimensionValues, onChange) {
+  constructor(containerId, tierTree, onChange) {
     this.container = document.getElementById(containerId);
     this.tierTree = tierTree;
-    this.dimensionValues = dimensionValues;
     this.onChange = onChange;
     this.checkboxes = {};
     this.render();
@@ -13,51 +12,28 @@ class HierarchicalLegend {
     this.container.style.cssText =
       "font-family:sans-serif;font-size:13px;max-height:80vh;overflow-y:auto;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa;";
 
-    if (Object.keys(this.dimensionValues).length > 0) {
-      const dimHeader = document.createElement("strong");
-      dimHeader.textContent = "Dimensions";
-      dimHeader.style.display = "block";
-      dimHeader.style.marginBottom = "4px";
-      this.container.appendChild(dimHeader);
-
-      for (const [dimName, values] of Object.entries(this.dimensionValues)) {
-        const dimDiv = document.createElement("div");
-        dimDiv.style.marginLeft = "8px";
-        dimDiv.style.marginBottom = "6px";
-
-        const label = document.createElement("span");
-        label.textContent = dimName + ": ";
-        label.style.fontWeight = "600";
-        dimDiv.appendChild(label);
-
-        for (const val of values) {
-          const cb = this._createCheckbox(`dim::${dimName}::${val}`, val, true);
-          dimDiv.appendChild(cb.wrapper);
-        }
-        this.container.appendChild(dimDiv);
-      }
-    }
-
     const tierHeader = document.createElement("strong");
     tierHeader.textContent = "Tiers";
-    tierHeader.style.cssText = "display:block;margin-top:10px;margin-bottom:4px;";
+    tierHeader.style.cssText = "display:block;margin-bottom:4px;";
     this.container.appendChild(tierHeader);
 
-    const tierUl = this._buildTierTree(this.tierTree, 0);
+    const tierUl = this._buildTierTree(this.tierTree, 0, "");
     this.container.appendChild(tierUl);
   }
 
-  _buildTierTree(node, depth) {
+  _buildTierTree(node, depth, pathPrefix) {
     const ul = document.createElement("ul");
     ul.style.cssText = "list-style:none;padding-left:" + (depth > 0 ? 16 : 4) + "px;margin:2px 0;";
+    const prefix = pathPrefix || "";
 
     if (typeof node === "object" && !Array.isArray(node)) {
       for (const [key, child] of Object.entries(node)) {
+        const fullPath = prefix ? prefix + "/" + key : key;
         const li = document.createElement("li");
-        const cb = this._createCheckbox(`tier::${depth}::${key}`, key, true);
+        const cb = this._createCheckbox(`tier::${fullPath}`, key, true);
         li.appendChild(cb.wrapper);
 
-        const childUl = this._buildTierTree(child, depth + 1);
+        const childUl = this._buildTierTree(child, depth + 1, fullPath);
         li.appendChild(childUl);
 
         cb.input.addEventListener("change", () => {
@@ -78,8 +54,9 @@ class HierarchicalLegend {
       }
     } else if (Array.isArray(node)) {
       for (const leaf of node) {
+        const fullPath = prefix ? prefix + "/" + leaf : leaf;
         const li = document.createElement("li");
-        const cb = this._createCheckbox(`tier::${depth}::${leaf}`, leaf, true);
+        const cb = this._createCheckbox(`tier::${fullPath}`, leaf, true);
         li.appendChild(cb.wrapper);
         ul.appendChild(li);
       }
@@ -122,19 +99,14 @@ class HierarchicalLegend {
   }
 
   getState() {
-    const dims = {};
     const tiers = [];
     for (const [id, cb] of Object.entries(this.checkboxes)) {
-      if (id.startsWith("dim::")) {
-        const parts = id.split("::");
-        const dimName = parts[1];
-        const val = parts.slice(2).join("::");
-        if (!dims[dimName]) dims[dimName] = [];
-        if (cb.checked) dims[dimName].push(val);
-      } else if (id.startsWith("tier::") && cb.checked) {
-        tiers.push(id.replace(/^tier::\d+::/, ""));
+      if (id.startsWith("tier::") && cb.checked) {
+        const path = id.slice(6);
+        const leaf = path.includes("/") ? path.split("/").pop() : path;
+        tiers.push(leaf);
       }
     }
-    return { dimensions: dims, tiers };
+    return { tiers };
   }
 }

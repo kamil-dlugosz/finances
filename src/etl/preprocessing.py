@@ -49,7 +49,11 @@ def _load_custom_tiers() -> list[dict]:
     except yaml.YAMLError as exc:
         logger.warning("Failed to parse %s: %s — skipping custom tiers", path, exc)
         return []
-    return data.get("custom_tiers", [])
+    rules = data.get("custom_tiers", [])
+    if not isinstance(rules, list):
+        logger.warning("Expected list for 'custom_tiers' in %s, got %s — skipping", path, type(rules).__name__)
+        return []
+    return rules
 
 
 def _apply_custom_tiers(df: pd.DataFrame) -> pd.DataFrame:

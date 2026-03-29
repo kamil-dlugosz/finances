@@ -90,8 +90,15 @@ def is_cache_valid(input_dir: Path) -> bool:
 
 def load_cache() -> tuple[pd.DataFrame, pd.DataFrame]:
     logger.info("Loading preprocessed data from cache")
-    expense_df = pd.read_parquet(EXPENSE_PARQUET)
-    income_df = pd.read_parquet(INCOME_PARQUET)
+    try:
+        expense_df = pd.read_parquet(EXPENSE_PARQUET)
+        income_df = pd.read_parquet(INCOME_PARQUET)
+    except Exception as exc:
+        logger.error("Corrupt cache parquet — deleting cache: %s", exc)
+        for f in (EXPENSE_PARQUET, INCOME_PARQUET, FINGERPRINT_FILE):
+            if f.exists():
+                f.unlink()
+        raise RuntimeError("Cache corrupted and deleted — rerun to rebuild") from exc
     return expense_df, income_df
 
 

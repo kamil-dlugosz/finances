@@ -109,7 +109,10 @@
   <script type="application/json" id="data-waterfall-stats">{{WATERFALL_STATS_JSON}}</script>
 
   <script>
-    function loadData(id) { return JSON.parse(document.getElementById(id).textContent); }
+    function loadData(id) {
+      try { return JSON.parse(document.getElementById(id).textContent); }
+      catch(e) { console.error("Failed to parse data from #" + id + ":", e); return null; }
+    }
 
     const SUNBURST_META = loadData("data-sunburst-frames");
     const SUNBURST_FRAMES = SUNBURST_META.frames;
@@ -250,13 +253,13 @@
     }
 
     /* --- Legends --- */
-    const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, {}, (state) => {
+    const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, (state) => {
       currentExpenseTierState = state;
       updateSunburst();
       filterBarTracesByTier("barplots-plot", BARPLOTS_DATA, state);
     });
 
-    const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, {}, (state) => {
+    const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, (state) => {
       filterWaterfallStats(WATERFALL_STATS, state);
     });
   </script>
