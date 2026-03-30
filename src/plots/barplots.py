@@ -7,6 +7,10 @@ from plotly.subplots import make_subplots
 from config import get_config, get_tier_tree
 
 
+def _fmt_thousands(val: float) -> str:
+    return f"{val:,.0f}".replace(",", ".")
+
+
 def _aggregate_by_time(
     df: pd.DataFrame,
     granularity: str,
@@ -19,17 +23,21 @@ def _aggregate_by_time(
     df = df.copy()
     if granularity == "year":
         df["Period"] = df[date_col].dt.to_period("Y").apply(lambda r: r.start_time.date())
+        df["PeriodLabel"] = df[date_col].dt.year.astype(str)
     elif granularity == "quarter":
         df["Period"] = df[date_col].dt.to_period("Q").apply(lambda r: r.start_time.date())
+        df["PeriodLabel"] = df[date_col].dt.year.astype(str) + " Q" + df[date_col].dt.quarter.astype(str)
     elif granularity == "week":
         df["Period"] = df[date_col].dt.to_period("W").apply(lambda r: r.start_time.date())
+        df["PeriodLabel"] = df["Period"].astype(str)
     elif granularity == "month":
         df["Period"] = df[date_col].dt.to_period("M").apply(lambda r: r.start_time.date())
+        df["PeriodLabel"] = df[date_col].dt.to_period("M").astype(str)
     else:
         raise ValueError(f"Unknown granularity: {granularity}")
 
     group_cols = list(dict.fromkeys([group_col, stack_col]))
-    grouped = df.groupby(group_cols + ["Period"])[amount_col].sum().reset_index()
+    grouped = df.groupby(group_cols + ["Period", "PeriodLabel"])[amount_col].sum().reset_index()
     return grouped
 
 
@@ -63,15 +71,16 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
             if single_tier:
                 subset = g_data.sort_values("Period")
                 trace = go.Bar(
-                    x=subset["Period"].astype(str),
+                    x=subset["PeriodLabel"],
                     y=subset[amount_col],
                     name=g,
                     legendgroup=g,
                     showlegend=False,
                     visible=(gran == "month"),
-                    text=subset[amount_col].round(0).astype(int).astype(str),
+                    hovertemplate=f"{g}<br>%{{y:,.2f}} PLN<extra></extra>",
+                    text=subset[amount_col].apply(_fmt_thousands),
                     textposition="inside",
-                    textangle=-90,
+                    textangle=0,
                     textfont=dict(size=10),
                 )
                 fig.add_trace(trace, row=1, col=col_idx)
@@ -80,15 +89,16 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
                 for sv in stack_vals:
                     subset = g_data[g_data[stack_col] == sv].sort_values("Period")
                     trace = go.Bar(
-                        x=subset["Period"].astype(str),
+                        x=subset["PeriodLabel"],
                         y=subset[amount_col],
                         name=sv,
                         legendgroup=sv,
                         showlegend=False,
                         visible=(gran == "month"),
-                        text=subset[amount_col].round(0).astype(int).astype(str),
+                        hovertemplate=f"{sv}<br>%{{y:,.2f}} PLN<extra></extra>",
+                        text=subset[amount_col].apply(_fmt_thousands),
                         textposition="inside",
-                        textangle=-90,
+                        textangle=0,
                         textfont=dict(size=10),
                     )
                     fig.add_trace(trace, row=1, col=col_idx)

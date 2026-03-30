@@ -84,6 +84,13 @@
       </div>
       <div class="section">
         <h2>Przychody vs Wydatki</h2>
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:13px;">
+          <label>Od:</label>
+          <input type="month" id="waterfall-start" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+          <label>Do:</label>
+          <input type="month" id="waterfall-end" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+          <button id="waterfall-reset" style="padding:2px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:12px;">Resetuj</button>
+        </div>
         <div id="waterfall-plot" class="plot-container"></div>
         <h3 style="margin-top:14px;font-size:14px;">Statystyki kategorii</h3>
         <table class="stats-table" id="waterfall-stats">
@@ -126,6 +133,7 @@
   <script type="application/json" id="data-sql-plots">{{SQL_PLOTS_JSON}}</script>
   <script type="application/json" id="data-tier-tree">{{TIER_TREE_JSON}}</script>
   <script type="application/json" id="data-waterfall-stats">{{WATERFALL_STATS_JSON}}</script>
+  <script type="application/json" id="data-waterfall-source">{{WATERFALL_SOURCE_JSON}}</script>
 
   <script>
     function loadData(id) {
@@ -164,6 +172,7 @@
     const SQL_PLOTS_DATA = loadData("data-sql-plots") || [];
     const TIER_TREE = _loaded["data-tier-tree"];
     const WATERFALL_STATS = loadData("data-waterfall-stats") || [];
+    const WATERFALL_SOURCE = loadData("data-waterfall-source") || {};
 
     /* --- Sunburst: slider + tier filter --- */
     let currentThresholdIdx = 3;
@@ -251,6 +260,76 @@
     /* --- Other plots --- */
     Plotly.newPlot("income-plot", INCOME_DATA.data, INCOME_DATA.layout, {responsive: true});
     Plotly.newPlot("waterfall-plot", WATERFALL_DATA.data, WATERFALL_DATA.layout, {responsive: true});
+
+    /* --- Waterfall date range filter --- */
+    (function() {
+      const src = WATERFALL_SOURCE;
+      if (!src.months || src.months.length === 0) return;
+
+      const startInput = document.getElementById("waterfall-start");
+      const endInput = document.getElementById("waterfall-end");
+      const resetBtn = document.getElementById("waterfall-reset");
+
+      startInput.value = src.months[0];
+      endInput.value = src.months[src.months.length - 1];
+      startInput.min = src.months[0];
+      startInput.max = src.months[src.months.length - 1];
+      endInput.min = src.months[0];
+      endInput.max = src.months[src.months.length - 1];
+
+      function recomputeWaterfall() {
+        const startM = startInput.value || src.months[0];
+        const endM = endInput.value || src.months[src.months.length - 1];
+        const months = src.months.filter(m => m >= startM && m <= endM);
+
+        let totalIncome = 0;
+        months.forEach(m => { totalIncome += (src.income_by_month[m] || 0); });
+
+        const tier1Sums = {};
+        for (const [tier, byMonth] of Object.entries(src.expense_by_tier1_month || {})) {
+          let s = 0;
+          months.forEach(m => { s += (byMonth[m] || 0); });
+          if (s !== 0) tier1Sums[tier] = s;
+        }
+
+        const sorted = Object.entries(tier1Sums).sort((a, b) => b[1] - a[1]);
+        const measures = ["absolute"];
+        const xLabels = ["Przychody"];
+        const yValues = [totalIncome];
+        const textVals = [plnFmt(totalIncome)];
+
+        sorted.forEach(([tier, amount]) => {
+          measures.push("relative");
+          xLabels.push(tier);
+          yValues.push(-amount);
+          textVals.push("-" + plnFmt(amount));
+        });
+
+        const remaining = totalIncome - sorted.reduce((s, e) => s + e[1], 0);
+        measures.push("total");
+        xLabels.push("Netto");
+        yValues.push(remaining);
+        textVals.push(plnFmt(remaining));
+
+        Plotly.react("waterfall-plot", [{
+          type: "waterfall",
+          measure: measures,
+          x: xLabels,
+          y: yValues,
+          text: textVals,
+          textposition: "outside",
+          connector: {line: {color: "rgb(63, 63, 63)"}},
+        }], WATERFALL_DATA.layout, {responsive: true});
+      }
+
+      startInput.addEventListener("change", recomputeWaterfall);
+      endInput.addEventListener("change", recomputeWaterfall);
+      resetBtn.addEventListener("click", () => {
+        startInput.value = src.months[0];
+        endInput.value = src.months[src.months.length - 1];
+        Plotly.react("waterfall-plot", WATERFALL_DATA.data, WATERFALL_DATA.layout, {responsive: true});
+      });
+    })();
 
     const sqlSection = document.getElementById("sql-plots-section");
     SQL_PLOTS_DATA.forEach((plotData, i) => {

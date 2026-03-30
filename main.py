@@ -13,7 +13,7 @@ from etl.preprocessing import preprocess
 from etl.cache import is_cache_valid, load_cache, save_cache
 from plots.sunburst import sunburst_data_to_json
 from plots.barplots import create_hierarchical_barplots
-from plots.income import create_income_barplot, create_waterfall, waterfall_stats_to_json
+from plots.income import create_income_barplot, create_waterfall, waterfall_stats_to_json, build_waterfall_source_data
 from plots.sql_plots import create_sql_plots
 from web.renderer import render_html
 
@@ -44,6 +44,7 @@ def main() -> None:
     waterfall_fig = create_waterfall(income_df, expense_df)
     sql_figs = create_sql_plots(expense_df, income_df)
     stats_json = waterfall_stats_to_json(expense_df)
+    waterfall_source_json = build_waterfall_source_data(income_df, expense_df)
 
     dist_dir = Path(__file__).resolve().parent / "dist"
     dist_dir.mkdir(exist_ok=True)
@@ -55,6 +56,7 @@ def main() -> None:
         waterfall_fig=waterfall_fig,
         sql_plot_figs=sql_figs,
         waterfall_stats_json=stats_json,
+        waterfall_source_json=waterfall_source_json,
         output_path=dist_dir / "output.html",
     )
     logger.info("Dashboard ready: %s", output.resolve())

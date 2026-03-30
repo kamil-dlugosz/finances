@@ -38,6 +38,7 @@ def render_html(
     waterfall_fig: go.Figure,
     sql_plot_figs: list[go.Figure],
     waterfall_stats_json: str,
+    waterfall_source_json: str = "{}",
     output_path: Path | str = "dist/output.html",
 ) -> Path:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -59,6 +60,7 @@ def render_html(
         "{{SQL_PLOTS_JSON}}": _safe_json(sql_plots_json),
         "{{TIER_TREE_JSON}}": _safe_json(tier_tree_json),
         "{{WATERFALL_STATS_JSON}}": _safe_json(waterfall_stats_json),
+        "{{WATERFALL_SOURCE_JSON}}": _safe_json(waterfall_source_json),
         "{{CACHE_INFO}}": _build_cache_info(),
     }
 

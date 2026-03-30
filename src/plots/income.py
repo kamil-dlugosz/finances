@@ -35,7 +35,7 @@ def create_income_barplot(income_df: pd.DataFrame) -> go.Figure:
             x=subset["Period"].astype(str),
             y=subset[amount_col],
             name=src,
-            hovertemplate="%{x}<br>" + src + ": %{y:,.2f} PLN<extra></extra>",
+            hovertemplate=f"{src}<br>%{{y:,.2f}} PLN<extra></extra>",
         ))
 
     fig.update_layout(
@@ -122,3 +122,35 @@ def build_waterfall_stats(expense_df: pd.DataFrame) -> list[dict]:
 
 def waterfall_stats_to_json(expense_df: pd.DataFrame) -> str:
     return json.dumps(build_waterfall_stats(expense_df))
+
+
+def build_waterfall_source_data(
+    income_df: pd.DataFrame,
+    expense_df: pd.DataFrame,
+) -> str:
+    """Embed monthly income/expense breakdowns for client-side waterfall recomputation."""
+    amount_col = get_config().preprocessing_columns.amount_column
+    date_col = get_config().preprocessing_columns.date_stamp_column
+
+    inc = income_df.copy()
+    inc["_month"] = inc[date_col].dt.to_period("M").astype(str)
+    income_by_month: dict[str, float] = (
+        inc.groupby("_month")[amount_col].sum().to_dict()
+    )
+
+    exp = expense_df.copy()
+    exp["_month"] = exp[date_col].dt.to_period("M").astype(str)
+    expense_by_tier1_month: dict[str, dict[str, float]] = {}
+    for tier1, grp in exp.groupby("Tier1"):
+        expense_by_tier1_month[str(tier1)] = grp.groupby("_month")[amount_col].sum().to_dict()
+
+    all_months = sorted(set(income_by_month.keys()) | {m for d in expense_by_tier1_month.values() for m in d})
+
+    return json.dumps({
+        "months": all_months,
+        "income_by_month": {k: round(v, 2) for k, v in income_by_month.items()},
+        "expense_by_tier1_month": {
+            t: {k: round(v, 2) for k, v in months.items()}
+            for t, months in expense_by_tier1_month.items()
+        },
+    })
