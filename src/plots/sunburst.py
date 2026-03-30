@@ -159,6 +159,7 @@ def create_transaction_sunburst(df: pd.DataFrame) -> go.Figure:
         hoverinfo="text",
         branchvalues="total",
         maxdepth=max_depth,
+        sort=False,
     ))
     fig.update_layout(margin=dict(t=40, l=20, r=20, b=20))
     return fig

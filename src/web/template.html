@@ -206,7 +206,8 @@
       const trace = {
         type: "sunburst", ids: ids, labels: labels, parents: parents,
         values: values, hovertext: hovers, hoverinfo: "text",
-        branchvalues: "total", maxdepth: MAX_SUNBURST_DEPTH
+        branchvalues: "total", maxdepth: MAX_SUNBURST_DEPTH,
+        sort: false
       };
       if (colors.length) trace.marker = {colors: colors};
 

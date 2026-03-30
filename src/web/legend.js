@@ -10,7 +10,7 @@ class HierarchicalLegend {
   render() {
     this.container.innerHTML = "";
     this.container.style.cssText =
-      "font-family:sans-serif;font-size:13px;max-height:80vh;overflow-y:auto;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa;";
+      "font-family:sans-serif;font-size:13px;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa;";
 
     const tierHeader = document.createElement("strong");
     tierHeader.textContent = "Kategorie";
@@ -93,8 +93,12 @@ class HierarchicalLegend {
   }
 
   _fireChange() {
-    const state = this.getState();
-    if (this.onChange) this.onChange(state);
+    if (this._rafId) cancelAnimationFrame(this._rafId);
+    this._rafId = requestAnimationFrame(() => {
+      this._rafId = null;
+      const state = this.getState();
+      if (this.onChange) this.onChange(state);
+    });
   }
 
   getState() {

@@ -124,5 +124,6 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
         margin=dict(t=80, l=40, r=20, b=40),
         height=500,
     )
+    fig.update_xaxes(type="category", tickangle=-45)
 
     return fig
