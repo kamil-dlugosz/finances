@@ -13,7 +13,7 @@ class HierarchicalLegend {
       "font-family:sans-serif;font-size:13px;max-height:80vh;overflow-y:auto;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa;";
 
     const tierHeader = document.createElement("strong");
-    tierHeader.textContent = "Tiers";
+    tierHeader.textContent = "Kategorie";
     tierHeader.style.cssText = "display:block;margin-bottom:4px;";
     this.container.appendChild(tierHeader);
 

@@ -23,6 +23,13 @@ _DIMENSION_BUILDERS: dict[str, Callable[[pd.DataFrame, str], pd.Series]] = {
     "Week": lambda df, col: df[col].dt.isocalendar().week.astype(str),
 }
 
+_DIMENSION_SORT_KEYS: dict[str, Callable[[pd.DataFrame, str], pd.Series]] = {
+    "Year": lambda df, col: df[col].dt.year,
+    "Month": lambda df, col: df[col].dt.month,
+    "Quarter": lambda df, col: df[col].dt.quarter,
+    "Week": lambda df, col: df[col].dt.isocalendar().week.astype(int),
+}
+
 _FALLBACK_TIER = "Bez kategorii"
 
 
@@ -109,6 +116,9 @@ def _add_dimension_columns(df: pd.DataFrame) -> pd.DataFrame:
             logger.warning("Unknown dimension '%s' — skipping", dim_name)
             continue
         df[f"Dim{dim_name}"] = builder(df, date_col)
+        sort_builder = _DIMENSION_SORT_KEYS.get(dim_name)
+        if sort_builder is not None:
+            df[f"Dim{dim_name}_sort"] = sort_builder(df, date_col)
     return df
 
 

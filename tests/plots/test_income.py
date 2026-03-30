@@ -29,6 +29,8 @@ class TestWaterfallStats:
         assert len(stats) > 0
         entry = stats[0]
         assert "tier_path" in entry
+        assert "tier_name" in entry
+        assert "depth" in entry
         assert "avg_amount" in entry
         assert "count" in entry
         assert "total" in entry
@@ -38,3 +40,14 @@ class TestWaterfallStats:
         for s in stats:
             assert s["avg_amount"] >= 0
             assert s["count"] > 0
+
+    def test_stats_sorted_by_path(self, preprocessed_expense_df):
+        stats = build_waterfall_stats(preprocessed_expense_df)
+        paths = [s["tier_path"] for s in stats]
+        assert paths == sorted(paths)
+
+    def test_stats_depth_matches_path(self, preprocessed_expense_df):
+        stats = build_waterfall_stats(preprocessed_expense_df)
+        for s in stats:
+            parts = s["tier_path"].split(" \u2192 ")
+            assert s["depth"] == len(parts)

@@ -13,4 +13,9 @@ class TestBarplots:
     def test_has_update_menus(self, preprocessed_expense_df):
         fig = create_hierarchical_barplots(preprocessed_expense_df)
         assert fig.layout.updatemenus is not None
-        assert len(fig.layout.updatemenus) > 0
+        buttons = fig.layout.updatemenus[0].buttons
+        assert len(buttons) == 4
+
+    def test_legend_hidden(self, preprocessed_expense_df):
+        fig = create_hierarchical_barplots(preprocessed_expense_df)
+        assert fig.layout.showlegend is False

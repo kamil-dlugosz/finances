@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
+
 import pytest
-from plots.sunburst import _build_sunburst_data, create_transaction_sunburst
+from plots.sunburst import _build_sunburst_data, create_transaction_sunburst, sunburst_data_to_json
 
 
 class TestSunburstData:
@@ -16,6 +18,7 @@ class TestSunburstData:
         assert len(data["labels"]) == n
         assert len(data["values"]) == n
         assert len(data["hovers"]) == n
+        assert len(data["colors"]) == n
 
     def test_transactions_have_parents(self, preprocessed_expense_df):
         data = _build_sunburst_data(preprocessed_expense_df, aggregation_threshold=0)
@@ -36,3 +39,19 @@ class TestCreateSunburst:
         fig = create_transaction_sunburst(preprocessed_expense_df)
         assert fig is not None
         assert len(fig.data) > 0
+
+
+class TestSunburstJson:
+    def test_json_contains_dim_count(self, preprocessed_expense_df):
+        raw = sunburst_data_to_json(preprocessed_expense_df)
+        meta = json.loads(raw)
+        assert "dim_count" in meta
+        assert isinstance(meta["dim_count"], int)
+        assert meta["dim_count"] >= 1
+
+    def test_frames_contain_colors(self, preprocessed_expense_df):
+        raw = sunburst_data_to_json(preprocessed_expense_df)
+        meta = json.loads(raw)
+        for key, frame in meta["frames"].items():
+            assert "colors" in frame
+            assert len(frame["colors"]) == len(frame["ids"])

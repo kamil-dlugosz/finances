@@ -17,8 +17,10 @@ def _aggregate_by_time(
     amount_col = get_config().preprocessing_columns.amount_column
 
     df = df.copy()
-    if granularity == "day":
-        df["Period"] = df[date_col].dt.date
+    if granularity == "year":
+        df["Period"] = df[date_col].dt.to_period("Y").apply(lambda r: r.start_time.date())
+    elif granularity == "quarter":
+        df["Period"] = df[date_col].dt.to_period("Q").apply(lambda r: r.start_time.date())
     elif granularity == "week":
         df["Period"] = df[date_col].dt.to_period("W").apply(lambda r: r.start_time.date())
     elif granularity == "month":
@@ -48,7 +50,7 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
         shared_yaxes=True,
     )
 
-    granularities = ["month", "week", "day"]
+    granularities = ["year", "quarter", "month", "week"]
     trace_ranges: dict[str, tuple[int, int]] = {}
 
     for gran in granularities:
@@ -65,8 +67,12 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
                     y=subset[amount_col],
                     name=g,
                     legendgroup=g,
-                    showlegend=(col_idx == 1),
+                    showlegend=False,
                     visible=(gran == "month"),
+                    text=subset[amount_col].round(0).astype(int).astype(str),
+                    textposition="inside",
+                    textangle=-90,
+                    textfont=dict(size=10),
                 )
                 fig.add_trace(trace, row=1, col=col_idx)
             else:
@@ -78,8 +84,12 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
                         y=subset[amount_col],
                         name=sv,
                         legendgroup=sv,
-                        showlegend=(col_idx == 1),
+                        showlegend=False,
                         visible=(gran == "month"),
+                        text=subset[amount_col].round(0).astype(int).astype(str),
+                        textposition="inside",
+                        textangle=-90,
+                        textfont=dict(size=10),
                     )
                     fig.add_trace(trace, row=1, col=col_idx)
 
@@ -100,6 +110,7 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         barmode="stack",
+        showlegend=False,
         updatemenus=[{
             "type": "buttons",
             "direction": "left",
@@ -108,6 +119,8 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
             "buttons": buttons,
             "showactive": True,
         }],
+        yaxis_title="Kwota (PLN)",
+        separators=", ",
         margin=dict(t=80, l=40, r=20, b=40),
         height=500,
     )

@@ -9,6 +9,12 @@ from config import get_config, get_tier_tree
 from etl.loading import INCOME_MIN_AMOUNT
 
 
+def _pln(val: float) -> str:
+    """Format number as Polish locale: 1.234,56"""
+    s = f"{val:,.2f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def create_income_barplot(income_df: pd.DataFrame) -> go.Figure:
     date_col = get_config().preprocessing_columns.date_stamp_column
     amount_col = get_config().preprocessing_columns.amount_column
@@ -17,7 +23,7 @@ def create_income_barplot(income_df: pd.DataFrame) -> go.Figure:
     df["Period"] = df[date_col].dt.to_period("M").apply(lambda r: r.start_time.date())
 
     source_col = "Counterparty" if "Counterparty" in df.columns else "Title"
-    df["_source"] = df[source_col].fillna("Unknown").astype(str)
+    df["_source"] = df[source_col].fillna("Nieznane").astype(str)
 
     agg = df.groupby(["Period", "_source"])[amount_col].sum().reset_index()
     sources = sorted(agg["_source"].unique())
@@ -34,9 +40,10 @@ def create_income_barplot(income_df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         barmode="stack",
-        title=f"Income Over Time (by source, \u2265 {INCOME_MIN_AMOUNT:,.0f} PLN)",
-        xaxis_title="Period",
-        yaxis_title="Amount (PLN)",
+        title=f"Przychody w czasie (wg \u017ar\u00f3d\u0142a, \u2265 {_pln(INCOME_MIN_AMOUNT)} PLN)",
+        xaxis_title="Okres",
+        yaxis_title="Kwota (PLN)",
+        separators=", ",
         margin=dict(t=50, l=40, r=20, b=40),
         legend=dict(font=dict(size=10)),
     )
@@ -53,21 +60,21 @@ def create_waterfall(
     tier1_sums = expense_df.groupby("Tier1")[amount_col].sum().sort_values(ascending=False)
 
     measures = ["absolute"]
-    x_labels = ["Income"]
+    x_labels = ["Przychody"]
     y_values = [total_income]
-    text_vals = [f"{total_income:,.2f}"]
+    text_vals = [_pln(total_income)]
 
     for tier, amount in tier1_sums.items():
         measures.append("relative")
         x_labels.append(str(tier))
         y_values.append(-amount)
-        text_vals.append(f"-{amount:,.2f}")
+        text_vals.append(f"-{_pln(amount)}")
 
     remaining = total_income - tier1_sums.sum()
     measures.append("total")
-    x_labels.append("Net")
+    x_labels.append("Netto")
     y_values.append(remaining)
-    text_vals.append(f"{remaining:,.2f}")
+    text_vals.append(_pln(remaining))
 
     fig = go.Figure(go.Waterfall(
         measure=measures,
@@ -79,8 +86,9 @@ def create_waterfall(
     ))
 
     fig.update_layout(
-        title="Income vs Expenses Waterfall",
-        yaxis_title="Amount (PLN)",
+        title="Przychody vs Wydatki",
+        yaxis_title="Kwota (PLN)",
+        separators=", ",
         margin=dict(t=50, l=40, r=20, b=40),
     )
     return fig
@@ -100,12 +108,15 @@ def build_waterfall_stats(expense_df: pd.DataFrame) -> list[dict]:
         for _, row in agg.iterrows():
             path_parts = [str(row[c]) for c in group_cols]
             stats.append({
-                "tier_path": " → ".join(path_parts),
+                "tier_path": " \u2192 ".join(path_parts),
+                "tier_name": path_parts[-1],
+                "depth": level,
                 "avg_amount": round(float(row["mean"]), 2),
                 "count": int(row["count"]),
                 "total": round(float(row["sum"]), 2),
             })
 
+    stats.sort(key=lambda s: s["tier_path"])
     return stats
 
 

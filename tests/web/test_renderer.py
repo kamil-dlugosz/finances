@@ -15,10 +15,11 @@ def _empty_fig() -> go.Figure:
 def _stub_frames_json() -> str:
     return json.dumps({
         "max_depth": 4,
+        "dim_count": 2,
         "thresholds": [0, 50],
         "frames": {
-            "0": {"ids": ["a"], "parents": [""], "labels": ["A"], "values": [1], "hovers": [""]},
-            "50": {"ids": ["a"], "parents": [""], "labels": ["A"], "values": [1], "hovers": [""]},
+            "0": {"ids": ["a"], "parents": [""], "labels": ["A"], "values": [1], "hovers": [""], "colors": ["#ccc"]},
+            "50": {"ids": ["a"], "parents": [""], "labels": ["A"], "values": [1], "hovers": [""], "colors": ["#ccc"]},
         },
     })
 
