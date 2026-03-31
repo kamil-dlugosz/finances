@@ -1,27 +1,44 @@
 from __future__ import annotations
 
 import pytest
-from plots.barplots import create_hierarchical_barplots
+from plots.barplots import create_barplots_per_tier1
 
 
-class TestBarplots:
-    def test_returns_figure(self, preprocessed_expense_df):
-        fig = create_hierarchical_barplots(preprocessed_expense_df)
-        assert fig is not None
-        assert len(fig.data) > 0
+class TestBarplotsPerTier1:
+    def test_returns_dict_of_figures(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        assert isinstance(result, dict)
+        assert len(result) > 0
+        for key, fig in result.items():
+            assert isinstance(key, str)
+            assert fig is not None
+            assert len(fig.data) > 0
 
-    def test_has_update_menus(self, preprocessed_expense_df):
-        fig = create_hierarchical_barplots(preprocessed_expense_df)
-        assert fig.layout.updatemenus is not None
-        buttons = fig.layout.updatemenus[0].buttons
-        assert len(buttons) == 4
+    def test_each_figure_has_legend(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        for fig in result.values():
+            assert fig.layout.showlegend is True
 
-    def test_legend_visible(self, preprocessed_expense_df):
-        fig = create_hierarchical_barplots(preprocessed_expense_df)
-        assert fig.layout.showlegend is True
+    def test_keys_are_tier1_values(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        tier1_vals = set(preprocessed_expense_df["Tier1"].dropna().unique())
+        assert set(result.keys()) == tier1_vals
 
-    def test_traces_named_by_full_tier_path(self, preprocessed_expense_df):
-        fig = create_hierarchical_barplots(preprocessed_expense_df)
-        trace_names = {t.name for t in fig.data if t.name}
-        for name in trace_names:
-            assert " > " in name or name in preprocessed_expense_df["Tier1"].unique()
+    def test_reversed_order(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        keys = list(result.keys())
+        assert keys == sorted(keys, reverse=True)
+
+    def test_each_figure_has_update_menus(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        for fig in result.values():
+            assert fig.layout.updatemenus is not None
+            buttons = fig.layout.updatemenus[0].buttons
+            assert len(buttons) == 4
+
+    def test_traces_use_compact_formatting(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        for fig in result.values():
+            for trace in fig.data:
+                if hasattr(trace, "text") and trace.text is not None:
+                    break

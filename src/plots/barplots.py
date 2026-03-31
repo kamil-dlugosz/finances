@@ -2,13 +2,9 @@ from __future__ import annotations
 
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 from config import get_config, get_tier_tree
-
-
-def _fmt_thousands(val: float) -> str:
-    return f"{val:,.0f}".replace(",", ".")
+from plots.colors import compact_fmt
 
 
 def _aggregate_by_time(
@@ -41,7 +37,8 @@ def _aggregate_by_time(
     return grouped
 
 
-def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
+def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
+    """Return one figure per Tier1 group, each with its own legend of leaf tiers."""
     amount_col = get_config().preprocessing_columns.amount_column
     depth = get_tier_tree().tier_depth
     group_col = "Tier1"
@@ -55,32 +52,27 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
         parts = [str(row[c]) for c in tier_cols]
         path_lookup[leaf] = " > ".join(parts)
 
-    group_vals = sorted(df[group_col].dropna().unique())
-    n_cols = max(len(group_vals), 1)
-
-    fig = make_subplots(
-        rows=n_cols,
-        cols=1,
-        subplot_titles=group_vals,
-    )
-
+    group_vals = sorted(df[group_col].dropna().unique(), reverse=True)
     granularities = ["year", "quarter", "month", "week"]
-    trace_ranges: dict[str, tuple[int, int]] = {}
-    seen_legendgroups: set[str] = set()
 
-    for gran in granularities:
-        start_idx = len(fig.data)
-        agg = _aggregate_by_time(df, gran, group_col, stack_col)
+    result: dict[str, go.Figure] = {}
 
-        for col_idx, g in enumerate(group_vals, start=1):
-            g_data = agg[agg[group_col] == g]
+    for g in group_vals:
+        g_df = df[df[group_col] == g]
+        fig = go.Figure()
+        trace_ranges: dict[str, tuple[int, int]] = {}
+        seen_legendgroups: set[str] = set()
+
+        for gran in granularities:
+            start_idx = len(fig.data)
+            agg = _aggregate_by_time(g_df, gran, group_col, stack_col)
 
             if single_tier:
-                subset = g_data.sort_values("Period")
+                subset = agg.sort_values("Period")
                 display_name = path_lookup.get(g, g)
                 first = g not in seen_legendgroups
                 seen_legendgroups.add(g)
-                trace = go.Bar(
+                fig.add_trace(go.Bar(
                     x=subset["PeriodLabel"],
                     y=subset[amount_col],
                     name=display_name,
@@ -88,23 +80,22 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
                     showlegend=first,
                     visible=(gran == "month"),
                     hovertemplate=f"{display_name}<br>%{{y:,.2f}} PLN<extra></extra>",
-                    text=subset[amount_col].apply(_fmt_thousands),
+                    text=subset[amount_col].apply(compact_fmt),
                     textposition="inside",
                     textangle=0,
                     textfont=dict(size=10),
-                )
-                fig.add_trace(trace, row=col_idx, col=1)
+                ))
             else:
                 stack_vals = sorted(
-                    g_data[stack_col].dropna().unique(),
+                    agg[stack_col].dropna().unique(),
                     key=lambda v: path_lookup.get(str(v), str(v)),
                 )
                 for sv in stack_vals:
-                    subset = g_data[g_data[stack_col] == sv].sort_values("Period")
+                    subset = agg[agg[stack_col] == sv].sort_values("Period")
                     display_name = path_lookup.get(str(sv), str(sv))
                     first = str(sv) not in seen_legendgroups
                     seen_legendgroups.add(str(sv))
-                    trace = go.Bar(
+                    fig.add_trace(go.Bar(
                         x=subset["PeriodLabel"],
                         y=subset[amount_col],
                         name=display_name,
@@ -112,45 +103,48 @@ def create_hierarchical_barplots(df: pd.DataFrame) -> go.Figure:
                         showlegend=first,
                         visible=(gran == "month"),
                         hovertemplate=f"{display_name}<br>%{{y:,.2f}} PLN<extra></extra>",
-                        text=subset[amount_col].apply(_fmt_thousands),
+                        text=subset[amount_col].apply(compact_fmt),
                         textposition="inside",
                         textangle=0,
                         textfont=dict(size=10),
-                    )
-                    fig.add_trace(trace, row=col_idx, col=1)
+                    ))
 
-        trace_ranges[gran] = (start_idx, len(fig.data))
+            trace_ranges[gran] = (start_idx, len(fig.data))
 
-    total_traces = len(fig.data)
-    buttons = []
-    for gran in granularities:
-        visibility = [False] * total_traces
-        lo, hi = trace_ranges[gran]
-        for j in range(lo, hi):
-            visibility[j] = True
-        buttons.append({
-            "label": gran.capitalize(),
-            "method": "update",
-            "args": [{"visible": visibility}],
-        })
+        total_traces = len(fig.data)
+        buttons = []
+        for gran in granularities:
+            visibility = [False] * total_traces
+            lo, hi = trace_ranges[gran]
+            for j in range(lo, hi):
+                visibility[j] = True
+            buttons.append({
+                "label": gran.capitalize(),
+                "method": "update",
+                "args": [{"visible": visibility}],
+            })
 
-    fig.update_layout(
-        barmode="stack",
-        showlegend=True,
-        legend=dict(font=dict(size=10)),
-        updatemenus=[{
-            "type": "buttons",
-            "direction": "left",
-            "x": 0.0,
-            "y": 1.15,
-            "buttons": buttons,
-            "showactive": True,
-        }],
-        yaxis_title="Kwota (PLN)",
-        separators=", ",
-        margin=dict(t=80, l=40, r=20, b=40),
-        height=400 * n_cols,
-    )
-    fig.update_xaxes(type="category", tickangle=-45)
+        fig.update_layout(
+            barmode="stack",
+            showlegend=True,
+            legend=dict(font=dict(size=10)),
+            title=dict(text=g, font=dict(size=14)),
+            updatemenus=[{
+                "type": "buttons",
+                "direction": "left",
+                "x": 0.0,
+                "y": 1.15,
+                "buttons": buttons,
+                "showactive": True,
+                "visible": False,
+            }],
+            yaxis_title="Kwota (PLN)",
+            separators=", ",
+            margin=dict(t=50, l=40, r=20, b=40),
+            height=350,
+        )
+        fig.update_xaxes(type="category", tickangle=-45)
 
-    return fig
+        result[g] = fig
+
+    return result

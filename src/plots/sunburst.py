@@ -6,14 +6,12 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from config import get_config, get_tier_tree
-
-_TIER1_PALETTE = [
-    "hsl(210,60%,50%)", "hsl(30,70%,50%)", "hsl(130,50%,45%)",
-    "hsl(0,60%,50%)", "hsl(270,50%,55%)", "hsl(50,70%,48%)",
-    "hsl(180,50%,45%)", "hsl(330,55%,50%)",
-]
-_DIM_COLOR = "hsl(0,0%,78%)"
-_TX_OPACITY = 0.45
+from plots.colors import (
+    DIM_COLOR,
+    tier1_color_map,
+    color_for_depth,
+    tx_color,
+)
 
 
 def _pln(val: float) -> str:
@@ -36,8 +34,7 @@ def _build_sunburst_data(
     all_path_cols = dim_cols + tier_cols
     dim_count = len(dim_cols)
 
-    tier1_vals = sorted(df["Tier1"].dropna().unique())
-    tier1_color_map = {v: _TIER1_PALETTE[i % len(_TIER1_PALETTE)] for i, v in enumerate(tier1_vals)}
+    t1_colors = tier1_color_map(df)
 
     ids: list[str] = []
     parents: list[str] = []
@@ -52,16 +49,11 @@ def _build_sunburst_data(
     def _color_for(parts: list[str], is_tx: bool = False) -> str:
         tier_segs = parts[dim_count:]
         if not tier_segs:
-            return _DIM_COLOR
-        base = tier1_color_map.get(tier_segs[0], _DIM_COLOR)
+            return DIM_COLOR
+        base = t1_colors.get(tier_segs[0], DIM_COLOR)
         if is_tx:
-            return base.replace(")", f",{_TX_OPACITY})").\
-                replace("hsl(", "hsla(")
-        tier_depth_here = len(tier_segs)
-        lightness_bump = (tier_depth_here - 1) * 8
-        h, s, l_part = base.split(",")
-        l_val = int(l_part.replace("%)", ""))
-        return f"{h},{s},{min(l_val + lightness_bump, 85)}%)"
+            return tx_color(base)
+        return color_for_depth(base, len(tier_segs))
 
     def _add_node(node_id: str, parent_id: str, name: str, label: str,
                   value: float, hover: str, color: str) -> None:
@@ -164,6 +156,7 @@ def create_transaction_sunburst(df: pd.DataFrame) -> go.Figure:
         branchvalues="total",
         maxdepth=max_depth,
         sort=False,
+        marker=dict(colors=default_data["colors"]),
     ))
     fig.update_layout(margin=dict(t=40, l=20, r=20, b=20))
     return fig
@@ -190,11 +183,14 @@ def sunburst_data_to_json(df: pd.DataFrame) -> str:
         key=lambda x: x["path"],
     )
 
+    t1_colors = tier1_color_map(df)
+
     return json.dumps({
         "max_depth": max_depth,
         "dim_count": dim_count,
         "leaf_tiers": leaf_tiers,
         "leaf_tier_paths": leaf_tier_paths,
+        "tier1_colors": t1_colors,
         "thresholds": sorted(frames_data.keys()),
         "frames": {str(int(k)): v for k, v in frames_data.items()},
     })

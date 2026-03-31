@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from plots.income import (
     create_income_barplot,
     create_waterfall,
     build_waterfall_stats,
+    build_flowing_waterfall_data,
 )
 
 
@@ -34,6 +37,7 @@ class TestWaterfallStats:
         entry = stats[0]
         assert "tier_path" in entry
         assert "tier_name" in entry
+        assert "tier1" in entry
         assert "depth" in entry
         assert "avg_amount" in entry
         assert "count" in entry
@@ -55,3 +59,26 @@ class TestWaterfallStats:
         for s in stats:
             parts = s["tier_path"].split(" \u2192 ")
             assert s["depth"] == len(parts)
+
+    def test_stats_tier1_present(self, preprocessed_expense_df):
+        stats = build_waterfall_stats(preprocessed_expense_df)
+        for s in stats:
+            assert s["tier1"] == s["tier_path"].split(" \u2192 ")[0]
+
+
+class TestFlowingWaterfall:
+    def test_returns_valid_json(self, sample_income_df, preprocessed_expense_df):
+        raw = build_flowing_waterfall_data(sample_income_df, preprocessed_expense_df)
+        data = json.loads(raw)
+        assert "month_periods" in data
+        assert "year_periods" in data
+        assert "income_by_month" in data
+        assert "income_by_year" in data
+        assert "expense_by_tier1_month" in data
+        assert "expense_by_tier1_year" in data
+
+    def test_periods_sorted(self, sample_income_df, preprocessed_expense_df):
+        raw = build_flowing_waterfall_data(sample_income_df, preprocessed_expense_df)
+        data = json.loads(raw)
+        assert data["month_periods"] == sorted(data["month_periods"])
+        assert data["year_periods"] == sorted(data["year_periods"])

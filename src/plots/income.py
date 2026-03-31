@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 
 from config import get_config, get_tier_tree
 from etl.loading import INCOME_MIN_AMOUNT
+from plots.colors import compact_fmt
 
 
 def _pln(val: float) -> str:
@@ -62,19 +63,20 @@ def create_waterfall(
     measures = ["absolute"]
     x_labels = ["Przychody"]
     y_values = [total_income]
-    text_vals = [_pln(total_income)]
+    text_vals = [f"<b>+{compact_fmt(total_income)}</b>"]
 
+    running = total_income
     for tier, amount in tier1_sums.items():
         measures.append("relative")
         x_labels.append(str(tier))
         y_values.append(-amount)
-        text_vals.append(f"-{_pln(amount)}")
+        running -= amount
+        text_vals.append(f"<b>-{compact_fmt(amount)}</b>")
 
-    remaining = total_income - tier1_sums.sum()
     measures.append("total")
     x_labels.append("Netto")
-    y_values.append(remaining)
-    text_vals.append(_pln(remaining))
+    y_values.append(running)
+    text_vals.append(f"<b>{compact_fmt(running)}</b>")
 
     fig = go.Figure(go.Waterfall(
         measure=measures,
@@ -82,7 +84,11 @@ def create_waterfall(
         y=y_values,
         text=text_vals,
         textposition="outside",
+        textfont=dict(size=11),
         connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing=dict(marker=dict(color="hsl(130,55%,42%)")),
+        decreasing=dict(marker=dict(color="hsl(0,60%,50%)")),
+        totals=dict(marker=dict(color="#4a90d9")),
     ))
 
     fig.update_layout(
@@ -110,6 +116,7 @@ def build_waterfall_stats(expense_df: pd.DataFrame) -> list[dict]:
             stats.append({
                 "tier_path": " \u2192 ".join(path_parts),
                 "tier_name": path_parts[-1],
+                "tier1": path_parts[0],
                 "depth": level,
                 "avg_amount": round(float(row["mean"]), 2),
                 "count": int(row["count"]),
@@ -153,4 +160,54 @@ def build_waterfall_source_data(
             t: {k: round(v, 2) for k, v in months.items()}
             for t, months in expense_by_tier1_month.items()
         },
+    })
+
+
+def build_flowing_waterfall_data(
+    income_df: pd.DataFrame,
+    expense_df: pd.DataFrame,
+) -> str:
+    """Build JSON for the flowing waterfall chart with monthly and yearly breakdowns."""
+    amount_col = get_config().preprocessing_columns.amount_column
+    date_col = get_config().preprocessing_columns.date_stamp_column
+
+    inc = income_df.copy()
+    exp = expense_df.copy()
+
+    inc["_month"] = inc[date_col].dt.to_period("M").astype(str)
+    inc["_year"] = inc[date_col].dt.year.astype(str)
+    exp["_month"] = exp[date_col].dt.to_period("M").astype(str)
+    exp["_year"] = exp[date_col].dt.year.astype(str)
+
+    income_by_month = inc.groupby("_month")[amount_col].sum().to_dict()
+    income_by_year = inc.groupby("_year")[amount_col].sum().to_dict()
+
+    expense_by_t1_month: dict[str, dict[str, float]] = {}
+    for tier1, grp in exp.groupby("Tier1"):
+        expense_by_t1_month[str(tier1)] = {
+            k: round(v, 2) for k, v in grp.groupby("_month")[amount_col].sum().to_dict().items()
+        }
+
+    expense_by_t1_year: dict[str, dict[str, float]] = {}
+    for tier1, grp in exp.groupby("Tier1"):
+        expense_by_t1_year[str(tier1)] = {
+            k: round(v, 2) for k, v in grp.groupby("_year")[amount_col].sum().to_dict().items()
+        }
+
+    all_months = sorted(
+        set(income_by_month.keys()) |
+        {m for d in expense_by_t1_month.values() for m in d}
+    )
+    all_years = sorted(
+        set(income_by_year.keys()) |
+        {y for d in expense_by_t1_year.values() for y in d}
+    )
+
+    return json.dumps({
+        "month_periods": all_months,
+        "year_periods": all_years,
+        "income_by_month": {k: round(v, 2) for k, v in income_by_month.items()},
+        "income_by_year": {k: round(v, 2) for k, v in income_by_year.items()},
+        "expense_by_tier1_month": expense_by_t1_month,
+        "expense_by_tier1_year": expense_by_t1_year,
     })

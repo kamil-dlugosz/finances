@@ -72,6 +72,13 @@ class TestSunburstJson:
         assert len(meta["leaf_tiers"]) > 0
         assert meta["leaf_tiers"] == sorted(meta["leaf_tiers"])
 
+    def test_json_contains_tier1_colors(self, preprocessed_expense_df):
+        raw = sunburst_data_to_json(preprocessed_expense_df)
+        meta = json.loads(raw)
+        assert "tier1_colors" in meta
+        assert isinstance(meta["tier1_colors"], dict)
+        assert len(meta["tier1_colors"]) > 0
+
     def test_json_contains_leaf_tier_paths(self, preprocessed_expense_df):
         raw = sunburst_data_to_json(preprocessed_expense_df)
         meta = json.loads(raw)

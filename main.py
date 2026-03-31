@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -12,8 +13,15 @@ from etl.loading import load_all_from_dir
 from etl.preprocessing import preprocess
 from etl.cache import is_cache_valid, load_cache, save_cache
 from plots.sunburst import sunburst_data_to_json
-from plots.barplots import create_hierarchical_barplots
-from plots.income import create_income_barplot, create_waterfall, waterfall_stats_to_json, build_waterfall_source_data
+from plots.barplots import create_barplots_per_tier1
+from plots.income import (
+    create_income_barplot,
+    create_waterfall,
+    waterfall_stats_to_json,
+    build_waterfall_source_data,
+    build_flowing_waterfall_data,
+)
+from plots.colors import tier1_color_map
 from plots.sql_plots import create_sql_plots
 from web.renderer import render_html
 
@@ -39,24 +47,28 @@ def main() -> None:
 
     logger.info("Building figures")
     sunburst_frames_json = sunburst_data_to_json(expense_df)
-    barplots_fig = create_hierarchical_barplots(expense_df)
+    barplots_dict = create_barplots_per_tier1(expense_df)
     income_fig = create_income_barplot(income_df)
     waterfall_fig = create_waterfall(income_df, expense_df)
     sql_figs = create_sql_plots(expense_df, income_df)
     stats_json = waterfall_stats_to_json(expense_df)
     waterfall_source_json = build_waterfall_source_data(income_df, expense_df)
+    flowing_waterfall_json = build_flowing_waterfall_data(income_df, expense_df)
+    t1_colors_json = json.dumps(tier1_color_map(expense_df))
 
     dist_dir = Path(__file__).resolve().parent / "dist"
     dist_dir.mkdir(exist_ok=True)
 
     output = render_html(
         sunburst_frames_json=sunburst_frames_json,
-        barplots_fig=barplots_fig,
+        barplots_dict=barplots_dict,
         income_fig=income_fig,
         waterfall_fig=waterfall_fig,
         sql_plot_figs=sql_figs,
         waterfall_stats_json=stats_json,
         waterfall_source_json=waterfall_source_json,
+        flowing_waterfall_json=flowing_waterfall_json,
+        tier1_colors_json=t1_colors_json,
         output_path=dist_dir / "output.html",
     )
     logger.info("Dashboard ready: %s", output.resolve())
