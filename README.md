@@ -44,7 +44,7 @@ finances/
 │   ├── etl/                  # CSV loading, preprocessing, cache
 │   ├── plots/                # sunburst, barplots, income, sql_plots
 │   ├── predictions/          # clustering, validation, CLI
-│   ├── web/                  # HTML renderer, template, legend.js
+│   ├── web/                  # HTML renderer, template
 │   └── tools/                # anonymizer, sql_viewer
 ├── tests/                    # pytest unit tests
 ├── resources/                # input data (gitignored)

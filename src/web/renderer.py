@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
 import plotly.graph_objects as go
 import plotly.io as pio
 
-from config import get_config
 from etl.cache import get_cache_metadata
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "template.html"
-LEGEND_JS_PATH = Path(__file__).resolve().parent / "legend.js"
 
 
 def _fig_to_json(fig: go.Figure) -> str:
@@ -42,9 +39,6 @@ def render_html(
     output_path: Path | str = "dist/output.html",
 ) -> Path:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
-    legend_js = LEGEND_JS_PATH.read_text(encoding="utf-8")
-
-    tier_tree_json = json.dumps(get_config().hierarchy.tiers)
 
     sql_plots_json = "[" + ",".join(_fig_to_json(f) for f in sql_plot_figs) + "]"
 
@@ -52,13 +46,11 @@ def render_html(
         return raw.replace("</", "<\\/")
 
     replacements = {
-        "{{LEGEND_JS}}": legend_js,
         "{{SUNBURST_FRAMES_JSON}}": _safe_json(sunburst_frames_json),
         "{{BARPLOTS_JSON}}": _safe_json(_fig_to_json(barplots_fig)),
         "{{INCOME_JSON}}": _safe_json(_fig_to_json(income_fig)),
         "{{WATERFALL_JSON}}": _safe_json(_fig_to_json(waterfall_fig)),
         "{{SQL_PLOTS_JSON}}": _safe_json(sql_plots_json),
-        "{{TIER_TREE_JSON}}": _safe_json(tier_tree_json),
         "{{WATERFALL_STATS_JSON}}": _safe_json(waterfall_stats_json),
         "{{WATERFALL_SOURCE_JSON}}": _safe_json(waterfall_source_json),
         "{{CACHE_INFO}}": _build_cache_info(),

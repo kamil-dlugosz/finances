@@ -21,6 +21,10 @@ class TestWaterfall:
         assert fig is not None
         assert len(fig.data) > 0
 
+    def test_no_dropdown(self, sample_income_df, preprocessed_expense_df):
+        fig = create_waterfall(sample_income_df, preprocessed_expense_df)
+        assert fig.layout.updatemenus is None or len(fig.layout.updatemenus) == 0
+
 
 class TestWaterfallStats:
     def test_stats_structure(self, preprocessed_expense_df):

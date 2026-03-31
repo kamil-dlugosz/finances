@@ -16,6 +16,8 @@ def _stub_frames_json() -> str:
     return json.dumps({
         "max_depth": 4,
         "dim_count": 2,
+        "leaf_tiers": ["TestTier"],
+        "leaf_tier_paths": [{"name": "TestTier", "path": "Root > TestTier"}],
         "thresholds": [0, 50],
         "frames": {
             "0": {"ids": ["a"], "parents": [""], "labels": ["A"], "values": [1], "hovers": [""], "colors": ["#ccc"]},

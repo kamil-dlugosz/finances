@@ -25,12 +25,13 @@ class TestMain:
             patch("main.load_all_from_dir", return_value=(preprocessed_expense_df, sample_income_df)),
             patch("main.preprocess", return_value=preprocessed_expense_df),
             patch("main.save_cache"),
-            patch("main.sunburst_data_to_json", return_value='{"frames":{"50":{"ids":[],"parents":[],"labels":[],"values":[],"hovers":[],"colors":[]}},"thresholds":[0,10,25,50,100,200,500],"max_depth":4,"dim_count":2}'),
+            patch("main.sunburst_data_to_json", return_value='{"frames":{"50":{"ids":[],"parents":[],"labels":[],"values":[],"hovers":[],"colors":[]}},"thresholds":[0,10,25,50,100,200,500],"max_depth":4,"dim_count":2,"leaf_tiers":[],"leaf_tier_paths":[]}'),
             patch("main.create_hierarchical_barplots", return_value=dummy_fig),
             patch("main.create_income_barplot", return_value=dummy_fig),
             patch("main.create_waterfall", return_value=dummy_fig),
             patch("main.create_sql_plots", return_value=[]),
             patch("main.waterfall_stats_to_json", return_value="[]"),
+            patch("main.build_waterfall_source_data", return_value="{}"),
             patch("main.render_html", return_value=dist_dir / "output.html") as mock_render,
         ):
             mock_cfg.return_value.paths.source_statements_path = tmp_path
@@ -53,12 +54,13 @@ class TestMain:
             patch("main.is_cache_valid", return_value=True),
             patch("main.load_cache", return_value=(preprocessed_expense_df, sample_income_df)),
             patch("main.load_all_from_dir") as mock_load,
-            patch("main.sunburst_data_to_json", return_value='{"frames":{"50":{"ids":[],"parents":[],"labels":[],"values":[],"hovers":[],"colors":[]}},"thresholds":[0,10,25,50,100,200,500],"max_depth":4,"dim_count":2}'),
+            patch("main.sunburst_data_to_json", return_value='{"frames":{"50":{"ids":[],"parents":[],"labels":[],"values":[],"hovers":[],"colors":[]}},"thresholds":[0,10,25,50,100,200,500],"max_depth":4,"dim_count":2,"leaf_tiers":[],"leaf_tier_paths":[]}'),
             patch("main.create_hierarchical_barplots", return_value=dummy_fig),
             patch("main.create_income_barplot", return_value=dummy_fig),
             patch("main.create_waterfall", return_value=dummy_fig),
             patch("main.create_sql_plots", return_value=[]),
             patch("main.waterfall_stats_to_json", return_value="[]"),
+            patch("main.build_waterfall_source_data", return_value="{}"),
             patch("main.render_html", return_value=dist_dir / "output.html"),
         ):
             mock_cfg.return_value.paths.source_statements_path = tmp_path

@@ -8,14 +8,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
-    .dashboard { display: flex; min-height: 100vh; }
-    .sidebar {
-      width: 280px; min-width: 280px; background: #fff; border-right: 1px solid #ddd;
-      padding: 16px; position: sticky; top: 0; height: 100vh;
-      display: flex; flex-direction: column;
-    }
-    .sidebar-section { flex: 1; min-height: 0; overflow-y: auto; }
-    .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+    .main-content { max-width: 1400px; margin: 0 auto; padding: 20px; }
     .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 20px; }
     .section h2 { font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid #4a90d9; padding-bottom: 6px; }
     .plot-container { width: 100%; }
@@ -34,81 +27,70 @@
     .modal h3 { margin-bottom: 12px; }
     .modal code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 14px; }
     .modal button { margin-top: 14px; padding: 6px 20px; cursor: pointer; border: 1px solid #999; border-radius: 4px; }
-    .sidebar h3 { font-size: 15px; margin-bottom: 10px; }
     .gran-btn { padding: 4px 14px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
     .gran-btn:hover { background: #f0f0f0; }
     .gran-btn.active { background: #4a90d9; color: #fff; border-color: #4a90d9; }
   </style>
 </head>
 <body>
-  <div class="dashboard">
-    <div class="sidebar">
-      <div class="sidebar-section">
-        <h3>Filtry wydatk&#243;w</h3>
-        <div id="expense-legend"></div>
+  <div class="main-content">
+    <!-- Section 1: Sunburst -->
+    <div class="section">
+      <h2>Wydatki &#8212; rozk&#322;ad</h2>
+      <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap;">
+        <label for="sunburst-threshold" style="white-space:nowrap;">Ukryj transakcje poni&#380;ej:</label>
+        <input type="range" id="sunburst-threshold" min="0" max="6" value="3" style="flex:1;max-width:260px;">
+        <span id="threshold-display" style="min-width:60px;font-weight:600;">50 PLN</span>
+        <label style="margin-left:16px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" id="sunburst-fill-ring"> Wype&#322;nij ca&#322;y pier&#347;cie&#324;
+        </label>
       </div>
-      <div class="sidebar-section" style="border-top:1px solid #ddd;padding-top:12px;margin-top:8px;">
-        <h3>Filtry przychod&#243;w</h3>
-        <div id="income-legend"></div>
-      </div>
+      <div id="sunburst-plot" class="plot-container"></div>
     </div>
 
-    <div class="main-content">
-      <!-- Section 1: Sunburst -->
-      <div class="section">
-        <h2>Wydatki &#8212; rozk&#322;ad</h2>
-        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:13px;">
-          <label for="sunburst-threshold" style="white-space:nowrap;">Ukryj transakcje poni&#380;ej:</label>
-          <input type="range" id="sunburst-threshold" min="0" max="6" value="3" style="flex:1;max-width:260px;">
-          <span id="threshold-display" style="min-width:60px;font-weight:600;">50 PLN</span>
-        </div>
-        <div id="sunburst-plot" class="plot-container"></div>
+    <!-- Section 2: Hierarchical Bar Plots -->
+    <div class="section">
+      <h2>Wydatki w czasie</h2>
+      <div id="bar-granularity" style="margin-bottom:10px;display:flex;gap:6px;font-size:13px;">
+        <button class="gran-btn" data-idx="0">Rok</button>
+        <button class="gran-btn" data-idx="1">Kwarta&#322;</button>
+        <button class="gran-btn active" data-idx="2">Miesi&#261;c</button>
+        <button class="gran-btn" data-idx="3">Tydzie&#324;</button>
       </div>
+      <div id="barplots-plot" class="plot-container"></div>
+    </div>
 
-      <!-- Section 2: Hierarchical Bar Plots -->
-      <div class="section">
-        <h2>Wydatki w czasie</h2>
-        <div id="bar-granularity" style="margin-bottom:10px;display:flex;gap:6px;font-size:13px;">
-          <button class="gran-btn" data-idx="0">Rok</button>
-          <button class="gran-btn" data-idx="1">Kwarta&#322;</button>
-          <button class="gran-btn active" data-idx="2">Miesi&#261;c</button>
-          <button class="gran-btn" data-idx="3">Tydzie&#324;</button>
-        </div>
-        <div id="barplots-plot" class="plot-container"></div>
+    <!-- Section 3: Income & Waterfall -->
+    <div class="section">
+      <h2>Przychody</h2>
+      <div id="income-plot" class="plot-container"></div>
+    </div>
+    <div class="section">
+      <h2>Przychody vs Wydatki</h2>
+      <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:13px;">
+        <label>Od:</label>
+        <input type="month" id="waterfall-start" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+        <label>Do:</label>
+        <input type="month" id="waterfall-end" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+        <button id="waterfall-reset" style="padding:2px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:12px;">Resetuj</button>
       </div>
+      <div id="waterfall-plot" class="plot-container"></div>
+      <h3 style="margin-top:14px;font-size:14px;">Statystyki kategorii</h3>
+      <table class="stats-table" id="waterfall-stats">
+        <thead><tr><th>Kategoria</th><th>&#346;rednia / txn</th><th>Liczba</th><th>Suma</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td><strong>Razem</strong></td><td id="stats-avg-sum" class="num"></td><td id="stats-count-sum" class="num"></td><td id="stats-total-sum" class="num"></td></tr></tfoot>
+      </table>
+    </div>
 
-      <!-- Section 3: Income & Waterfall -->
-      <div class="section">
-        <h2>Przychody</h2>
-        <div id="income-plot" class="plot-container"></div>
-      </div>
-      <div class="section">
-        <h2>Przychody vs Wydatki</h2>
-        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:13px;">
-          <label>Od:</label>
-          <input type="month" id="waterfall-start" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
-          <label>Do:</label>
-          <input type="month" id="waterfall-end" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
-          <button id="waterfall-reset" style="padding:2px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:12px;">Resetuj</button>
-        </div>
-        <div id="waterfall-plot" class="plot-container"></div>
-        <h3 style="margin-top:14px;font-size:14px;">Statystyki kategorii</h3>
-        <table class="stats-table" id="waterfall-stats">
-          <thead><tr><th>Kategoria</th><th>&#346;rednia / txn</th><th>Liczba</th><th>Suma</th></tr></thead>
-          <tbody></tbody>
-          <tfoot><tr><td><strong>Razem</strong></td><td id="stats-avg-sum" class="num"></td><td id="stats-count-sum" class="num"></td><td id="stats-total-sum" class="num"></td></tr></tfoot>
-        </table>
-      </div>
+    <!-- Section 4: SQL-Driven Plots -->
+    <div class="section" id="sql-plots-section">
+      <h2>Wykresy z zapyta&#324; SQL</h2>
+    </div>
 
-      <!-- Section 4: SQL-Driven Plots -->
-      <div class="section" id="sql-plots-section">
-        <h2>Wykresy z zapyta&#324; SQL</h2>
-      </div>
-
-      <div class="footer">
-        <span id="cache-info">{{CACHE_INFO}}</span>
-        <button onclick="document.getElementById('recompute-modal').classList.add('active')">Wymu&#347; przeliczenie</button>
-      </div>
+    <div class="footer">
+      <span id="cache-info">{{CACHE_INFO}}</span>
+      <button onclick="document.getElementById('recompute-modal').classList.add('active')">Wymu&#347; przeliczenie</button>
     </div>
   </div>
 
@@ -121,17 +103,11 @@
     </div>
   </div>
 
-  <!-- Legend JS -->
-  <script>
-{{LEGEND_JS}}
-  </script>
-
   <script type="application/json" id="data-sunburst-frames">{{SUNBURST_FRAMES_JSON}}</script>
   <script type="application/json" id="data-barplots">{{BARPLOTS_JSON}}</script>
   <script type="application/json" id="data-income">{{INCOME_JSON}}</script>
   <script type="application/json" id="data-waterfall">{{WATERFALL_JSON}}</script>
   <script type="application/json" id="data-sql-plots">{{SQL_PLOTS_JSON}}</script>
-  <script type="application/json" id="data-tier-tree">{{TIER_TREE_JSON}}</script>
   <script type="application/json" id="data-waterfall-stats">{{WATERFALL_STATS_JSON}}</script>
   <script type="application/json" id="data-waterfall-source">{{WATERFALL_SOURCE_JSON}}</script>
 
@@ -148,7 +124,7 @@
       return n.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2});
     }
 
-    const _required = ["data-sunburst-frames","data-barplots","data-income","data-waterfall","data-tier-tree"];
+    const _required = ["data-sunburst-frames","data-barplots","data-income","data-waterfall"];
     const _loaded = {};
     let _loadError = false;
     _required.forEach(id => { _loaded[id] = loadData(id); if (!_loaded[id]) _loadError = true; });
@@ -164,19 +140,25 @@
     const SUNBURST_THRESHOLDS = SUNBURST_META.thresholds;
     const MAX_SUNBURST_DEPTH = SUNBURST_META.max_depth;
     const DIM_COUNT = SUNBURST_META.dim_count;
-    const SUNBURST_LAYOUT = {margin: {t: 40, l: 20, r: 20, b: 20}, height: 750};
+    const LEAF_TIERS = SUNBURST_META.leaf_tiers || [];
+    const LEAF_TIER_PATHS = SUNBURST_META.leaf_tier_paths || [];
 
     const BARPLOTS_DATA = _loaded["data-barplots"];
     const INCOME_DATA = _loaded["data-income"];
     const WATERFALL_DATA = _loaded["data-waterfall"];
     const SQL_PLOTS_DATA = loadData("data-sql-plots") || [];
-    const TIER_TREE = _loaded["data-tier-tree"];
     const WATERFALL_STATS = loadData("data-waterfall-stats") || [];
     const WATERFALL_SOURCE = loadData("data-waterfall-source") || {};
 
-    /* --- Sunburst: slider + tier filter --- */
+    /* --- Sunburst: threshold slider + multi-select legend --- */
     let currentThresholdIdx = 3;
-    let currentExpenseTierState = null;
+    const hiddenLeafTiers = new Set();
+    let fillWholeRing = false;
+
+    const SUNBURST_LAYOUT = {
+      margin: {t: 40, l: 20, r: 20, b: 20}, height: 750, showlegend: true,
+      xaxis: {visible: false}, yaxis: {visible: false}
+    };
 
     const thresholdSlider = document.getElementById("sunburst-threshold");
     const thresholdDisplay = document.getElementById("threshold-display");
@@ -187,30 +169,85 @@
       updateSunburst();
     });
 
+    const fillRingCb = document.getElementById("sunburst-fill-ring");
+    if (fillRingCb) {
+      fillRingCb.addEventListener("change", () => {
+        fillWholeRing = fillRingCb.checked;
+        updateSunburst();
+      });
+    }
+
     function updateSunburst() {
       const threshold = String(SUNBURST_THRESHOLDS[currentThresholdIdx]);
       const frame = SUNBURST_FRAMES[threshold];
       if (!frame) return;
 
-      let ids = frame.ids, parents = frame.parents, labels = frame.labels;
-      let values = frame.values, hovers = frame.hovers;
-      let colors = frame.colors || [];
+      let ids = frame.ids.slice(), parents = frame.parents.slice(), labels = frame.labels.slice();
+      let names = frame.names ? frame.names.slice() : [];
+      let values = frame.values.slice(), hovers = frame.hovers.slice();
+      let colors = frame.colors ? frame.colors.slice() : [];
 
-      if (currentExpenseTierState && currentExpenseTierState.tiers.length > 0) {
-        const sel = new Set(currentExpenseTierState.tiers);
-        const fI = [], fP = [], fL = [], fV = [], fH = [], fC = [];
+      if (hiddenLeafTiers.size > 0) {
+        const keepSet = new Set();
         for (let i = 0; i < ids.length; i++) {
           const segs = ids[i].split("|");
           const tierSegs = segs.slice(DIM_COUNT).filter(s => !s.startsWith("tx_") && s !== "agg_hidden");
-          const pass = tierSegs.length === 0 || tierSegs.every(s => sel.has(s));
-          if (pass) {
+          const leafTier = tierSegs.length > 0 ? tierSegs[tierSegs.length - 1] : null;
+          const isHidden = leafTier && hiddenLeafTiers.has(leafTier);
+          if (!isHidden) {
+            keepSet.add(ids[i]);
+            const parts = ids[i].split("|");
+            for (let j = 1; j < parts.length; j++) keepSet.add(parts.slice(0, j).join("|"));
+          }
+        }
+        const fI = [], fP = [], fL = [], fN = [], fV = [], fH = [], fC = [];
+        for (let i = 0; i < ids.length; i++) {
+          if (keepSet.has(ids[i])) {
             fI.push(ids[i]); fP.push(parents[i]); fL.push(labels[i]);
+            if (names.length) fN.push(names[i]);
             fV.push(values[i]); fH.push(hovers[i] || "");
             if (colors.length) fC.push(colors[i]);
           }
         }
-        ids = fI; parents = fP; labels = fL; values = fV; hovers = fH; colors = fC;
+        ids = fI; parents = fP; labels = fL; names = fN;
+        values = fV; hovers = fH; colors = fC;
       }
+
+      if (fillWholeRing && ids.length > 0) {
+        const children = {};
+        for (let i = 0; i < ids.length; i++) {
+          const p = parents[i];
+          if (!children[p]) children[p] = [];
+          children[p].push(i);
+        }
+        const isLeaf = ids.map((id) => !(id in children));
+        const order = [];
+        const visited = new Set();
+        function topo(idx) {
+          if (visited.has(idx)) return;
+          visited.add(idx);
+          if (children[ids[idx]]) {
+            children[ids[idx]].forEach(c => topo(c));
+          }
+          order.push(idx);
+        }
+        for (let i = 0; i < ids.length; i++) topo(i);
+        for (const idx of order) {
+          if (!isLeaf[idx]) {
+            const ch = children[ids[idx]] || [];
+            values[idx] = ch.reduce((s, c) => s + values[c], 0);
+          }
+        }
+      }
+
+      if (names.length === ids.length) {
+        for (let i = 0; i < ids.length; i++) {
+          labels[i] = names[i] + "<br>" + plnFmt(values[i]);
+        }
+      }
+
+      const gd = document.getElementById("sunburst-plot");
+      const currentLevel = gd.data && gd.data[0] ? gd.data[0].level : undefined;
 
       const trace = {
         type: "sunburst", ids: ids, labels: labels, parents: parents,
@@ -220,14 +257,38 @@
       };
       if (colors.length) trace.marker = {colors: colors};
 
-      Plotly.react("sunburst-plot", [trace], SUNBURST_LAYOUT, {responsive: true});
+      const dummyTraces = LEAF_TIER_PATHS.map(t => ({
+        x: [null], y: [null], type: "scatter", mode: "markers",
+        marker: {size: 8},
+        name: t.path,
+        visible: hiddenLeafTiers.has(t.name) ? "legendonly" : true,
+        showlegend: true
+      }));
+
+      Plotly.react("sunburst-plot", [trace, ...dummyTraces], SUNBURST_LAYOUT, {responsive: true});
+
+      if (currentLevel && ids.includes(currentLevel)) {
+        Plotly.restyle("sunburst-plot", {level: currentLevel}, [0]);
+      }
     }
     updateSunburst();
 
-    /* --- Barplots: granularity + tier filter --- */
+    document.getElementById("sunburst-plot").on("plotly_legendclick", function(evtData) {
+      const traceIdx = evtData.curveNumber;
+      if (traceIdx === 0) return false;
+      const leafIdx = traceIdx - 1;
+      if (leafIdx < 0 || leafIdx >= LEAF_TIER_PATHS.length) return false;
+      const tierName = LEAF_TIER_PATHS[leafIdx].name;
+      if (hiddenLeafTiers.has(tierName)) hiddenLeafTiers.delete(tierName);
+      else hiddenLeafTiers.add(tierName);
+      updateSunburst();
+      return false;
+    });
+
+    /* --- Barplots: granularity buttons + legend-based tier filtering --- */
     const BAR_BUTTONS = BARPLOTS_DATA.layout.updatemenus ? BARPLOTS_DATA.layout.updatemenus[0].buttons : [];
     let currentBarGranIdx = 2;
-    let currentBarTierState = null;
+    const hiddenBarTiers = new Set();
 
     const barLayout = Object.assign({}, BARPLOTS_DATA.layout);
     delete barLayout.updatemenus;
@@ -245,17 +306,23 @@
     function updateBarplots() {
       if (!BAR_BUTTONS.length) return;
       const base = BAR_BUTTONS[currentBarGranIdx].args[0].visible;
-      const selectedTiers = currentBarTierState ? new Set(currentBarTierState.tiers) : null;
-
       const visibility = base.map((v, i) => {
         if (!v) return false;
-        if (!selectedTiers || selectedTiers.size === 0) return true;
+        if (hiddenBarTiers.size === 0) return true;
         const name = BARPLOTS_DATA.data[i] ? (BARPLOTS_DATA.data[i].name || "") : "";
-        return selectedTiers.has(name) ? true : "legendonly";
+        return hiddenBarTiers.has(name) ? "legendonly" : true;
       });
       Plotly.restyle("barplots-plot", { visible: visibility });
     }
     updateBarplots();
+
+    document.getElementById("barplots-plot").on("plotly_legendclick", function(evtData) {
+      const name = BARPLOTS_DATA.data[evtData.curveNumber] ? BARPLOTS_DATA.data[evtData.curveNumber].name : "";
+      if (hiddenBarTiers.has(name)) hiddenBarTiers.delete(name);
+      else hiddenBarTiers.add(name);
+      updateBarplots();
+      return false;
+    });
 
     /* --- Other plots --- */
     Plotly.newPlot("income-plot", INCOME_DATA.data, INCOME_DATA.layout, {responsive: true});
@@ -341,24 +408,10 @@
       Plotly.newPlot(div.id, plotData.data, plotData.layout, {responsive: true});
     });
 
-    /* --- Waterfall stats --- */
-    function renderStats(stats) {
+    /* --- Waterfall stats (static, no filtering) --- */
+    (function renderStats(stats) {
       const tbody = document.querySelector("#waterfall-stats tbody");
-      tbody.innerHTML = "";
-      if (stats.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 4;
-        td.style.textAlign = "center";
-        td.style.color = "#888";
-        td.textContent = "Brak wybranych kategorii \u2014 zaznacz filtry po lewej.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-        document.getElementById("stats-avg-sum").textContent = "\u2014";
-        document.getElementById("stats-count-sum").textContent = "\u2014";
-        document.getElementById("stats-total-sum").textContent = "\u2014";
-        return;
-      }
+      if (stats.length === 0) return;
       let countSum = 0, totalSum = 0;
       stats.forEach(s => {
         const tr = document.createElement("tr");
@@ -384,31 +437,7 @@
       document.getElementById("stats-avg-sum").textContent = "\u2014";
       document.getElementById("stats-count-sum").textContent = countSum;
       document.getElementById("stats-total-sum").textContent = numFmt(totalSum);
-    }
-    renderStats(WATERFALL_STATS);
-
-    /* --- Legend filter functions --- */
-    function filterWaterfallStats(stats, state) {
-      const selectedTiers = new Set(state.tiers);
-      if (selectedTiers.size === 0) { renderStats(stats); return; }
-      const filtered = stats.filter(s => {
-        const parts = s.tier_path.split(" \u2192 ");
-        return parts.some(p => selectedTiers.has(p));
-      });
-      renderStats(filtered);
-    }
-
-    /* --- Legends --- */
-    const expenseLegend = new HierarchicalLegend("expense-legend", TIER_TREE, (state) => {
-      currentExpenseTierState = state;
-      currentBarTierState = state;
-      updateSunburst();
-      updateBarplots();
-    });
-
-    const incomeLegend = new HierarchicalLegend("income-legend", TIER_TREE, (state) => {
-      filterWaterfallStats(WATERFALL_STATS, state);
-    });
+    })(WATERFALL_STATS);
   </script>
 </body>
 </html>

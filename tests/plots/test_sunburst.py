@@ -16,6 +16,7 @@ class TestSunburstData:
         n = len(data["ids"])
         assert len(data["parents"]) == n
         assert len(data["labels"]) == n
+        assert len(data["names"]) == n
         assert len(data["values"]) == n
         assert len(data["hovers"]) == n
         assert len(data["colors"]) == n
@@ -55,3 +56,32 @@ class TestSunburstJson:
         for key, frame in meta["frames"].items():
             assert "colors" in frame
             assert len(frame["colors"]) == len(frame["ids"])
+
+    def test_frames_contain_names(self, preprocessed_expense_df):
+        raw = sunburst_data_to_json(preprocessed_expense_df)
+        meta = json.loads(raw)
+        for key, frame in meta["frames"].items():
+            assert "names" in frame
+            assert len(frame["names"]) == len(frame["ids"])
+
+    def test_json_contains_leaf_tiers(self, preprocessed_expense_df):
+        raw = sunburst_data_to_json(preprocessed_expense_df)
+        meta = json.loads(raw)
+        assert "leaf_tiers" in meta
+        assert isinstance(meta["leaf_tiers"], list)
+        assert len(meta["leaf_tiers"]) > 0
+        assert meta["leaf_tiers"] == sorted(meta["leaf_tiers"])
+
+    def test_json_contains_leaf_tier_paths(self, preprocessed_expense_df):
+        raw = sunburst_data_to_json(preprocessed_expense_df)
+        meta = json.loads(raw)
+        assert "leaf_tier_paths" in meta
+        paths = meta["leaf_tier_paths"]
+        assert isinstance(paths, list)
+        assert len(paths) > 0
+        for p in paths:
+            assert "name" in p
+            assert "path" in p
+            assert " > " in p["path"]
+        path_strs = [p["path"] for p in paths]
+        assert path_strs == sorted(path_strs)

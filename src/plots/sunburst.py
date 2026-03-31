@@ -42,6 +42,7 @@ def _build_sunburst_data(
     ids: list[str] = []
     parents: list[str] = []
     labels: list[str] = []
+    names: list[str] = []
     values: list[float] = []
     hovers: list[str] = []
     colors: list[str] = []
@@ -62,13 +63,14 @@ def _build_sunburst_data(
         l_val = int(l_part.replace("%)", ""))
         return f"{h},{s},{min(l_val + lightness_bump, 85)}%)"
 
-    def _add_node(node_id: str, parent_id: str, label: str, value: float,
-                  hover: str, color: str) -> None:
+    def _add_node(node_id: str, parent_id: str, name: str, label: str,
+                  value: float, hover: str, color: str) -> None:
         if node_id in seen:
             return
         seen.add(node_id)
         ids.append(node_id)
         parents.append(parent_id)
+        names.append(name)
         labels.append(label)
         values.append(value)
         hovers.append(hover)
@@ -107,7 +109,7 @@ def _build_sunburst_data(
 
                 hover_path = " \u2192 ".join(parts)
                 label_text = f"{val}<br>{_pln(node_sum)} PLN"
-                _add_node(node_id, parent_id, label_text, node_sum,
+                _add_node(node_id, parent_id, val, label_text, node_sum,
                           hover_path, _color_for(parts))
 
     for full_path, group in df.groupby("FullPath", sort=False):
@@ -123,20 +125,22 @@ def _build_sunburst_data(
             target = tx_row.get("TargetAccount", "")
             title = tx_row.get("Title", "")
             amt = tx_row[amount_col]
+            tx_name = f"{target}<br>{title}"
             tx_label = f"{target}<br>{title}<br>{_pln(amt)} PLN"
             tx_hover = tx_row.get("TransactionHover", "")
-            _add_node(tx_id, parent_id, tx_label, amt, tx_hover,
+            _add_node(tx_id, parent_id, tx_name, tx_label, amt, tx_hover,
                       _color_for(parent_parts, is_tx=True))
 
         if len(below) > 0:
             agg_sum = below[amount_col].sum()
             agg_id = f"{parent_id}|agg_hidden"
+            agg_name = f"<b>[{len(below)} zagregowanych]</b>"
             agg_label = f"<b>[{len(below)} zagregowanych]<br>{_pln(agg_sum)} PLN</b>"
             agg_hover = f"{len(below)} transakcji poni\u017cej progu {aggregation_threshold:.0f} PLN"
-            _add_node(agg_id, parent_id, agg_label, agg_sum, agg_hover,
-                      _color_for(parent_parts, is_tx=True))
+            _add_node(agg_id, parent_id, agg_name, agg_label, agg_sum,
+                      agg_hover, _color_for(parent_parts, is_tx=True))
 
-    return {"ids": ids, "parents": parents, "labels": labels,
+    return {"ids": ids, "parents": parents, "labels": labels, "names": names,
             "values": values, "hovers": hovers, "colors": colors}
 
 
@@ -169,11 +173,28 @@ def sunburst_data_to_json(df: pd.DataFrame) -> str:
     """Return JSON with all threshold frames + metadata for client-side rendering."""
     frames_data = build_sunburst_frames(df)
     cfg = get_config()
+    tree = get_tier_tree()
     dim_count = len(cfg.hierarchy.dimensions)
-    max_depth = dim_count + get_tier_tree().tier_depth
+    max_depth = dim_count + tree.tier_depth
+    leaf_col = f"Tier{tree.tier_depth}"
+    leaf_tiers = sorted(df[leaf_col].dropna().unique().tolist()) if leaf_col in df.columns else []
+
+    tier_cols = [f"Tier{d}" for d in range(1, tree.tier_depth + 1)]
+    path_lookup: dict[str, str] = {}
+    for _, row in df.drop_duplicates(subset=tier_cols, keep="first").iterrows():
+        leaf_val = str(row[leaf_col])
+        parts = [str(row[c]) for c in tier_cols]
+        path_lookup[leaf_val] = " > ".join(parts)
+    leaf_tier_paths = sorted(
+        [{"name": n, "path": path_lookup.get(n, n)} for n in leaf_tiers],
+        key=lambda x: x["path"],
+    )
+
     return json.dumps({
         "max_depth": max_depth,
         "dim_count": dim_count,
+        "leaf_tiers": leaf_tiers,
+        "leaf_tier_paths": leaf_tier_paths,
         "thresholds": sorted(frames_data.keys()),
         "frames": {str(int(k)): v for k, v in frames_data.items()},
     })
