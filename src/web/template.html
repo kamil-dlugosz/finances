@@ -8,11 +8,11 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
-    .main-content { max-width: 1400px; margin: 0 auto; padding: 60px 20px 20px; }
+    .main-content { max-width: 1400px; margin: 0 auto; padding: 20px; }
     .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 20px; }
     .section h2 { font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid #4a90d9; padding-bottom: 6px; }
     .plot-container { width: 100%; }
-    #sunburst-plot { min-height: 750px; }
+    #sunburst-plot { min-height: 750px; overflow-y: auto; max-height: 850px; }
     .stats-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
     .stats-table th { background: #f0f0f0; font-weight: 600; }
@@ -32,31 +32,38 @@
     .gran-btn.active, .ctrl-btn.active { background: #4a90d9; color: #fff; border-color: #4a90d9; }
     .ctrl-row { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-size: 13px; flex-wrap: wrap; }
 
-    /* Sticky nav */
-    .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #fff; border-bottom: 1px solid #ddd; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; justify-content: center; gap: 4px; padding: 6px 12px; flex-wrap: wrap; }
-    .top-nav a { padding: 4px 12px; border-radius: 12px; font-size: 13px; text-decoration: none; color: #555; white-space: nowrap; transition: background .15s, color .15s; }
-    .top-nav a:hover { background: #e8e8e8; color: #222; }
-    .top-nav a.active { background: #4a90d9; color: #fff; }
+    /* Collapsible sidebar nav */
+    .nav-toggle { position: fixed; top: 10px; left: 10px; z-index: 200; width: 36px; height: 36px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.12); font-size: 18px; color: #555; }
+    .nav-toggle:hover { background: #f0f0f0; }
+    .nav-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 150; }
+    .nav-backdrop.open { display: block; }
+    .side-nav { position: fixed; top: 0; left: -220px; width: 210px; height: 100%; z-index: 200; background: #fff; box-shadow: 2px 0 8px rgba(0,0,0,0.15); transition: left .2s ease; padding: 50px 12px 20px; overflow-y: auto; }
+    .side-nav.open { left: 0; }
+    .side-nav a { display: block; padding: 8px 12px; border-radius: 6px; font-size: 13px; text-decoration: none; color: #555; margin-bottom: 2px; transition: background .15s, color .15s; }
+    .side-nav a:hover { background: #e8e8e8; color: #222; }
+    .side-nav a.active { background: #4a90d9; color: #fff; }
 
-    /* Barplots grid */
-    #barplots-container { display: grid; gap: 12px; }
-    #barplots-container.grid-2x2 { grid-template-columns: repeat(2, 1fr); }
-    #barplots-container.grid-row { grid-template-columns: repeat(var(--bar-cols, 4), 1fr); }
+    /* Barplots grid — always 2x2 */
+    #barplots-container { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
 
     /* Stats controls */
-    .stats-controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 8px 0 6px; font-size: 13px; }
-    .stats-controls label { display: flex; align-items: center; gap: 6px; }
-    .stats-controls input[type=range] { width: 140px; }
+    .stats-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0 6px; font-size: 13px; }
+    .btn-group { display: inline-flex; gap: 3px; align-items: center; }
+    .btn-group .ctrl-btn { padding: 2px 8px; font-size: 12px; }
+
+    /* Flowing waterfall scroll wrapper */
+    .flow-scroll { overflow-x: auto; }
   </style>
 </head>
 <body>
 
-  <!-- Sticky navigation -->
-  <nav class="top-nav" id="top-nav">
+  <!-- Collapsible sidebar navigation -->
+  <button class="nav-toggle" id="nav-toggle">&#9776;</button>
+  <div class="nav-backdrop" id="nav-backdrop"></div>
+  <nav class="side-nav" id="side-nav">
     <a href="#sec-sunburst">Wydatki &mdash; rozk&#322;ad</a>
     <a href="#sec-barplots">Wydatki w czasie</a>
     <a href="#sec-income">Przychody</a>
-    <a href="#sec-waterfall">Przychody vs Wydatki</a>
     <a href="#sec-flowing">Bilans w czasie</a>
     <a href="#sec-stats">Statystyki kategorii</a>
     <a href="#sec-sql">Wykresy SQL</a>
@@ -70,11 +77,9 @@
         <label for="sunburst-threshold" style="white-space:nowrap;">Ukryj transakcje poni&#380;ej:</label>
         <input type="range" id="sunburst-threshold" min="0" max="6" value="3" style="flex:1;max-width:260px;">
         <span id="threshold-display" style="min-width:60px;font-weight:600;">50 PLN</span>
-
         <label style="margin-left:16px;display:flex;align-items:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="sunburst-fill-ring" checked> Wype&#322;nij ca&#322;y pier&#347;cie&#324;
         </label>
-
         <span style="margin-left:16px;display:flex;align-items:center;gap:4px;">
           <span style="white-space:nowrap;">G&#322;&#281;boko&#347;&#263;:</span>
           <button class="ctrl-btn" id="depth-minus" style="padding:2px 10px;font-weight:700;">&#8722;</button>
@@ -94,7 +99,7 @@
         <button class="gran-btn active" data-gran="month">Miesi&#261;c</button>
         <button class="gran-btn" data-gran="week">Tydzie&#324;</button>
       </div>
-      <div id="barplots-container" class="grid-2x2"></div>
+      <div id="barplots-container"></div>
     </div>
 
     <!-- Section 3: Income -->
@@ -103,22 +108,7 @@
       <div id="income-plot" class="plot-container"></div>
     </div>
 
-    <!-- Section 4: Waterfall -->
-    <div class="section" id="sec-waterfall">
-      <h2>Przychody vs Wydatki</h2>
-      <div class="ctrl-row">
-        <label>Kwota pocz&#261;tkowa:</label>
-        <input type="number" id="waterfall-start-amount" value="0" step="100" style="width:120px;padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
-        <label style="margin-left:16px;">Od:</label>
-        <input type="month" id="waterfall-start" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
-        <label>Do:</label>
-        <input type="month" id="waterfall-end" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
-        <button id="waterfall-reset" class="ctrl-btn" style="font-size:12px;">Resetuj</button>
-      </div>
-      <div id="waterfall-plot" class="plot-container"></div>
-    </div>
-
-    <!-- Section 5: Flowing Waterfall -->
+    <!-- Section 4: Flowing Waterfall -->
     <div class="section" id="sec-flowing">
       <h2>Bilans w czasie</h2>
       <div class="ctrl-row">
@@ -126,18 +116,27 @@
         <button class="gran-btn flow-gran-btn" data-flow-gran="year">Rok</button>
         <label style="margin-left:16px;">Kwota pocz&#261;tkowa:</label>
         <input type="number" id="flowing-start-amount" value="0" step="100" style="width:120px;padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+        <label style="margin-left:16px;">Od:</label>
+        <input type="month" id="flowing-start-month" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+        <label>Do:</label>
+        <input type="month" id="flowing-end-month" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
+        <button id="flowing-reset" class="ctrl-btn" style="font-size:12px;">Resetuj</button>
       </div>
-      <div id="flowing-waterfall-plot" class="plot-container"></div>
+      <div class="flow-scroll">
+        <div id="flowing-waterfall-plot" class="plot-container"></div>
+      </div>
     </div>
 
-    <!-- Section 6: Stats -->
+    <!-- Section 5: Stats -->
     <div class="section" id="sec-stats">
       <h2>Statystyki kategorii</h2>
       <div class="stats-controls">
         <span>G&#322;&#281;boko&#347;&#263;:</span>
-        <span id="stats-depth-btns"></span>
-        <label>Min. transakcji: <input type="range" id="stats-min-count" min="0" value="0"> <span id="stats-min-count-val">0</span></label>
-        <label>Min. suma: <input type="range" id="stats-min-total" min="0" value="0"> <span id="stats-min-total-val">0</span></label>
+        <span id="stats-depth-btns" class="btn-group"></span>
+        <span style="margin-left:8px;">Min. transakcji:</span>
+        <span id="stats-count-btns" class="btn-group"></span>
+        <span style="margin-left:8px;">Min. suma:</span>
+        <span id="stats-total-btns" class="btn-group"></span>
         <label style="margin-left:8px;"><input type="checkbox" id="stats-collapse-mode"> Zwi&#324; zamiast ukryj</label>
       </div>
       <table class="stats-table" id="waterfall-stats">
@@ -147,7 +146,7 @@
       </table>
     </div>
 
-    <!-- Section 7: SQL-Driven Plots -->
+    <!-- Section 6: SQL-Driven Plots -->
     <div class="section" id="sec-sql">
       <h2>Wykresy z zapyta&#324; SQL</h2>
     </div>
@@ -170,10 +169,8 @@
   <script type="application/json" id="data-sunburst-frames">{{SUNBURST_FRAMES_JSON}}</script>
   <script type="application/json" id="data-barplots">{{BARPLOTS_JSON}}</script>
   <script type="application/json" id="data-income">{{INCOME_JSON}}</script>
-  <script type="application/json" id="data-waterfall">{{WATERFALL_JSON}}</script>
   <script type="application/json" id="data-sql-plots">{{SQL_PLOTS_JSON}}</script>
   <script type="application/json" id="data-waterfall-stats">{{WATERFALL_STATS_JSON}}</script>
-  <script type="application/json" id="data-waterfall-source">{{WATERFALL_SOURCE_JSON}}</script>
   <script type="application/json" id="data-flowing-waterfall">{{FLOWING_WATERFALL_JSON}}</script>
   <script type="application/json" id="data-tier1-colors">{{TIER1_COLORS_JSON}}</script>
 
@@ -193,10 +190,17 @@
   }
   {{COMPACT_FMT_JS}}
 
+  var POLISH_SHORT_MONTHS = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Pa\u017a','Lis','Gru'];
+  function shortMonth(periodStr) {
+    var m = periodStr.match(/(\d{4})-(\d{2})/);
+    if (!m) return periodStr;
+    return POLISH_SHORT_MONTHS[parseInt(m[2]) - 1] + ' ' + m[1].slice(2);
+  }
+
   /* ====================================================================
      Load data
      ==================================================================== */
-  var _required = ["data-sunburst-frames","data-barplots","data-income","data-waterfall"];
+  var _required = ["data-sunburst-frames","data-barplots","data-income"];
   var _loaded = {};
   var _loadError = false;
   _required.forEach(function(id) { _loaded[id] = loadData(id); if (!_loaded[id]) _loadError = true; });
@@ -217,10 +221,8 @@
 
   var BARPLOTS_DATA   = _loaded["data-barplots"];
   var INCOME_DATA     = _loaded["data-income"];
-  var WATERFALL_DATA  = _loaded["data-waterfall"];
   var SQL_PLOTS_DATA  = loadData("data-sql-plots") || [];
   var WATERFALL_STATS = loadData("data-waterfall-stats") || [];
-  var WATERFALL_SOURCE = loadData("data-waterfall-source") || {};
   var FLOWING_DATA    = loadData("data-flowing-waterfall") || {};
   var TIER1_COLORS    = loadData("data-tier1-colors") || {};
 
@@ -234,6 +236,7 @@
 
   var SUNBURST_LAYOUT = {
     margin: {t: 40, l: 20, r: 20, b: 20}, height: 750, showlegend: true,
+    legend: {y: 0.5, yanchor: 'middle', font: {size: 11}},
     xaxis: {visible: false}, yaxis: {visible: false}
   };
 
@@ -242,25 +245,17 @@
     var roots = [];
     for (var i = 0; i < frame.ids.length; i++) {
       nodes[frame.ids[i]] = {
-        id: frame.ids[i],
-        parentId: frame.parents[i],
+        id: frame.ids[i], parentId: frame.parents[i],
         name: frame.names ? frame.names[i] : '',
-        label: frame.labels[i],
-        value: frame.values[i],
-        origValue: frame.values[i],
-        hover: frame.hovers[i] || '',
-        color: frame.colors ? frame.colors[i] : '',
-        children: [],
-        hidden: false
+        label: frame.labels[i], value: frame.values[i], origValue: frame.values[i],
+        hover: frame.hovers[i] || '', color: frame.colors ? frame.colors[i] : '',
+        children: [], hidden: false
       };
     }
     for (var id in nodes) {
       var n = nodes[id];
-      if (n.parentId && nodes[n.parentId]) {
-        nodes[n.parentId].children.push(n);
-      } else {
-        roots.push(n);
-      }
+      if (n.parentId && nodes[n.parentId]) nodes[n.parentId].children.push(n);
+      else roots.push(n);
     }
     return {nodes: nodes, roots: roots};
   }
@@ -291,10 +286,7 @@
   function recalcValues(tree) {
     function recalc(node) {
       if (node.hidden) return;
-      if (node.children.length === 0) {
-        node.value = node.origValue;
-        return;
-      }
+      if (node.children.length === 0) { node.value = node.origValue; return; }
       var sum = 0;
       for (var i = 0; i < node.children.length; i++) {
         recalc(node.children[i]);
@@ -309,13 +301,9 @@
     var ids = [], parents = [], labels = [], values = [], hovers = [], colors = [];
     function walk(node) {
       if (node.hidden) return;
-      ids.push(node.id);
-      parents.push(node.parentId);
-      var lbl = node.name ? (node.name + '<br>' + plnFmt(node.value)) : node.label;
-      labels.push(lbl);
-      values.push(node.value);
-      hovers.push(node.hover);
-      colors.push(node.color);
+      ids.push(node.id); parents.push(node.parentId);
+      labels.push(node.name ? (node.name + '<br>' + plnFmt(node.value)) : node.label);
+      values.push(node.value); hovers.push(node.hover); colors.push(node.color);
       for (var i = 0; i < node.children.length; i++) walk(node.children[i]);
     }
     for (var i = 0; i < tree.roots.length; i++) walk(tree.roots[i]);
@@ -326,55 +314,38 @@
     var threshold = String(SUNBURST_THRESHOLDS[currentThresholdIdx]);
     var frame = SUNBURST_FRAMES[threshold];
     if (!frame) return;
-
     var tree = buildTree(frame);
     applyFilters(tree);
     recalcValues(tree);
     var flat = flattenTree(tree);
-
     var gd = document.getElementById('sunburst-plot');
     var currentLevel = gd.data && gd.data[0] ? gd.data[0].level : undefined;
-
     var trace = {
       type: 'sunburst', ids: flat.ids, labels: flat.labels, parents: flat.parents,
       values: flat.values, hovertext: flat.hovers, hoverinfo: 'text',
       branchvalues: 'total', maxdepth: sunburstMaxDepth, sort: false
     };
     if (flat.colors.length) trace.marker = {colors: flat.colors};
-
     var dummyTraces = LEAF_TIER_PATHS.map(function(t) {
       return {
-        x: [null], y: [null], type: 'scatter', mode: 'markers',
-        marker: {size: 8},
-        name: t.path,
-        visible: hiddenLeafTiers.has(t.name) ? 'legendonly' : true,
-        showlegend: true
+        x: [null], y: [null], type: 'scatter', mode: 'markers', marker: {size: 8},
+        name: t.path, visible: hiddenLeafTiers.has(t.name) ? 'legendonly' : true, showlegend: true
       };
     });
-
     Plotly.react('sunburst-plot', [trace].concat(dummyTraces), SUNBURST_LAYOUT, {responsive: true});
     if (currentLevel && flat.ids.indexOf(currentLevel) >= 0) {
       Plotly.restyle('sunburst-plot', {level: currentLevel}, [0]);
     }
   }
 
-  /* Threshold slider */
-  var thresholdSlider = document.getElementById('sunburst-threshold');
-  var thresholdDisplay = document.getElementById('threshold-display');
-  thresholdSlider.addEventListener('input', function() {
-    currentThresholdIdx = parseInt(thresholdSlider.value);
-    thresholdDisplay.textContent = SUNBURST_THRESHOLDS[currentThresholdIdx] + ' PLN';
+  document.getElementById('sunburst-threshold').addEventListener('input', function() {
+    currentThresholdIdx = parseInt(this.value);
+    document.getElementById('threshold-display').textContent = SUNBURST_THRESHOLDS[currentThresholdIdx] + ' PLN';
     updateSunburst();
   });
-
-  /* Fill-ring checkbox */
-  var fillRingCb = document.getElementById('sunburst-fill-ring');
-  fillRingCb.addEventListener('change', function() {
-    fillWholeRing = fillRingCb.checked;
-    updateSunburst();
+  document.getElementById('sunburst-fill-ring').addEventListener('change', function() {
+    fillWholeRing = this.checked; updateSunburst();
   });
-
-  /* Depth stepper */
   var depthDisplay = document.getElementById('depth-display');
   depthDisplay.textContent = String(sunburstMaxDepth);
   document.getElementById('depth-minus').addEventListener('click', function() {
@@ -383,14 +354,11 @@
   document.getElementById('depth-plus').addEventListener('click', function() {
     if (sunburstMaxDepth < MAX_SUNBURST_DEPTH) { sunburstMaxDepth++; depthDisplay.textContent = String(sunburstMaxDepth); updateSunburst(); }
   });
-
   updateSunburst();
 
-  /* Legend click for multi-select filtering */
   document.getElementById('sunburst-plot').on('plotly_legendclick', function(evtData) {
-    var traceIdx = evtData.curveNumber;
-    if (traceIdx === 0) return false;
-    var leafIdx = traceIdx - 1;
+    if (evtData.curveNumber === 0) return false;
+    var leafIdx = evtData.curveNumber - 1;
     if (leafIdx < 0 || leafIdx >= LEAF_TIER_PATHS.length) return false;
     var tierName = LEAF_TIER_PATHS[leafIdx].name;
     if (hiddenLeafTiers.has(tierName)) hiddenLeafTiers.delete(tierName);
@@ -400,12 +368,10 @@
   });
 
   /* ====================================================================
-     2. BARPLOTS — per-Tier1 figures with CSS grid
+     2. BARPLOTS — per-Tier1, always 2x2 grid
      ==================================================================== */
   var barTier1Names = Object.keys(BARPLOTS_DATA);
-  var currentBarGran = 'month';
   var barContainer = document.getElementById('barplots-container');
-  barContainer.style.setProperty('--bar-cols', String(barTier1Names.length));
 
   barTier1Names.forEach(function(t1name) {
     var div = document.createElement('div');
@@ -419,10 +385,6 @@
   });
 
   function updateBarGranularity(gran) {
-    currentBarGran = gran;
-    var useGrid = (gran === 'month' || gran === 'week');
-    barContainer.className = useGrid ? 'grid-2x2' : 'grid-row';
-
     barTier1Names.forEach(function(t1name) {
       var figData = BARPLOTS_DATA[t1name];
       var buttons = figData.layout.updatemenus ? figData.layout.updatemenus[0].buttons : [];
@@ -448,111 +410,7 @@
   Plotly.newPlot('income-plot', INCOME_DATA.data, INCOME_DATA.layout, {responsive: true});
 
   /* ====================================================================
-     4. ORIGINAL WATERFALL — with colors, starting amount, compact fmt
-     ==================================================================== */
-  (function() {
-    var src = WATERFALL_SOURCE;
-    if (!src.months || src.months.length === 0) {
-      Plotly.newPlot('waterfall-plot', WATERFALL_DATA.data, WATERFALL_DATA.layout, {responsive: true});
-      return;
-    }
-
-    var startInput = document.getElementById('waterfall-start');
-    var endInput = document.getElementById('waterfall-end');
-    var resetBtn = document.getElementById('waterfall-reset');
-    var startAmountInput = document.getElementById('waterfall-start-amount');
-
-    var savedStart = localStorage.getItem('waterfall_start_amount');
-    if (savedStart !== null) startAmountInput.value = savedStart;
-
-    startInput.value = src.months[0];
-    endInput.value = src.months[src.months.length - 1];
-    startInput.min = src.months[0];
-    startInput.max = src.months[src.months.length - 1];
-    endInput.min = src.months[0];
-    endInput.max = src.months[src.months.length - 1];
-
-    function recomputeWaterfall() {
-      localStorage.setItem('waterfall_start_amount', startAmountInput.value);
-      var startAmount = parseFloat(startAmountInput.value) || 0;
-      var startM = startInput.value || src.months[0];
-      var endM = endInput.value || src.months[src.months.length - 1];
-      var months = src.months.filter(function(m) { return m >= startM && m <= endM; });
-
-      var totalIncome = 0;
-      months.forEach(function(m) { totalIncome += (src.income_by_month[m] || 0); });
-
-      var tier1Sums = {};
-      for (var tier in (src.expense_by_tier1_month || {})) {
-        var s = 0;
-        months.forEach(function(m) { s += (src.expense_by_tier1_month[tier][m] || 0); });
-        if (s !== 0) tier1Sums[tier] = s;
-      }
-
-      var sorted = Object.entries(tier1Sums).sort(function(a, b) { return b[1] - a[1]; });
-      var measures = [], xLabels = [], yValues = [], textVals = [], markerColors = [];
-      var running = startAmount;
-
-      if (startAmount !== 0) {
-        measures.push('absolute');
-        xLabels.push('Start');
-        yValues.push(startAmount);
-        textVals.push('<b>' + compactFmt(startAmount) + '</b>');
-        markerColors.push('#888');
-        running = startAmount;
-      }
-
-      measures.push('relative');
-      xLabels.push('Przychody');
-      yValues.push(totalIncome);
-      running += totalIncome;
-      textVals.push('<b>+' + compactFmt(totalIncome) + '</b><br>netto: ' + compactFmt(running));
-      markerColors.push('hsl(130,55%,42%)');
-
-      sorted.forEach(function(entry) {
-        var tier = entry[0], amount = entry[1];
-        measures.push('relative');
-        xLabels.push(tier);
-        yValues.push(-amount);
-        running -= amount;
-        textVals.push('<b>-' + compactFmt(amount) + '</b><br>netto: ' + compactFmt(running));
-        markerColors.push(TIER1_COLORS[tier] || '#999');
-      });
-
-      measures.push('total');
-      xLabels.push('Netto');
-      yValues.push(running);
-      textVals.push('<b>' + compactFmt(running) + '</b>');
-      markerColors.push(running >= 0 ? 'hsl(130,55%,42%)' : 'hsl(0,60%,50%)');
-
-      Plotly.react('waterfall-plot', [{
-        type: 'waterfall',
-        measure: measures,
-        x: xLabels,
-        y: yValues,
-        text: textVals,
-        textposition: 'outside',
-        textfont: {size: 11},
-        connector: {line: {color: 'rgb(63,63,63)'}},
-        marker: {color: markerColors}
-      }], Object.assign({}, WATERFALL_DATA.layout, {
-        margin: {t: 50, l: 40, r: 20, b: 60}
-      }), {responsive: true});
-    }
-
-    startInput.addEventListener('change', recomputeWaterfall);
-    endInput.addEventListener('change', recomputeWaterfall);
-    startAmountInput.addEventListener('change', recomputeWaterfall);
-    resetBtn.addEventListener('click', function() {
-      startInput.value = src.months[0];
-      endInput.value = src.months[src.months.length - 1];
-      recomputeWaterfall();
-    });
-    recomputeWaterfall();
-  })();
-
-  /* ====================================================================
-     5. FLOWING WATERFALL — cumulative balance per period
+     4. FLOWING WATERFALL — with month filter, netto labels, wide scroll
      ==================================================================== */
   (function() {
     var fd = FLOWING_DATA;
@@ -560,19 +418,33 @@
 
     var currentFlowGran = 'month';
     var flowStartInput = document.getElementById('flowing-start-amount');
+    var flowStartMonth = document.getElementById('flowing-start-month');
+    var flowEndMonth = document.getElementById('flowing-end-month');
+    var flowResetBtn = document.getElementById('flowing-reset');
 
     var savedFlowStart = localStorage.getItem('flowing_start_amount');
     if (savedFlowStart !== null) flowStartInput.value = savedFlowStart;
 
+    flowStartMonth.value = fd.month_periods[0];
+    flowEndMonth.value = fd.month_periods[fd.month_periods.length - 1];
+    flowStartMonth.min = fd.month_periods[0];
+    flowStartMonth.max = fd.month_periods[fd.month_periods.length - 1];
+    flowEndMonth.min = fd.month_periods[0];
+    flowEndMonth.max = fd.month_periods[fd.month_periods.length - 1];
+
     function renderFlowingWaterfall() {
       localStorage.setItem('flowing_start_amount', flowStartInput.value);
       var startAmount = parseFloat(flowStartInput.value) || 0;
-      var periods = currentFlowGran === 'month' ? (fd.month_periods || []) : (fd.year_periods || []);
+      var allPeriods = currentFlowGran === 'month' ? (fd.month_periods || []) : (fd.year_periods || []);
       var incByPeriod = currentFlowGran === 'month' ? (fd.income_by_month || {}) : (fd.income_by_year || {});
       var expByT1Period = currentFlowGran === 'month' ? (fd.expense_by_tier1_month || {}) : (fd.expense_by_tier1_year || {});
 
+      var startM = flowStartMonth.value || allPeriods[0];
+      var endM = flowEndMonth.value || allPeriods[allPeriods.length - 1];
+      var periods = allPeriods.filter(function(p) { return p >= startM && p <= endM; });
+
       var tier1Names = Object.keys(expByT1Period).sort();
-      var measures = [], xLabels = [], yValues = [], textVals = [], markerColors = [];
+      var measures = [], xLabels = [], yValues = [], textVals = [], markerColors = [], hoverTexts = [];
       var running = startAmount;
 
       measures.push('absolute');
@@ -580,36 +452,46 @@
       yValues.push(startAmount);
       textVals.push('<b>' + compactFmt(startAmount) + '</b>');
       markerColors.push('#888');
+      hoverTexts.push('Kwota pocz\u0105tkowa<br>' + plnFmt(startAmount));
 
       periods.forEach(function(p) {
+        var periodLabel = currentFlowGran === 'month' ? shortMonth(p) : p;
         var inc = incByPeriod[p] || 0;
         if (inc > 0) {
           measures.push('relative');
-          xLabels.push(p + ' +');
+          xLabels.push(periodLabel + ' +');
           yValues.push(inc);
           running += inc;
-          textVals.push('<b>+' + compactFmt(inc) + '</b>');
+          textVals.push('<b>+' + compactFmt(inc) + '</b><br>netto: ' + compactFmt(running));
           markerColors.push('hsl(130,55%,42%)');
+          hoverTexts.push('Przychody ' + periodLabel + '<br>' + plnFmt(inc) + '<br>Netto: ' + plnFmt(running));
         }
 
         tier1Names.forEach(function(t1) {
           var amt = (expByT1Period[t1] || {})[p] || 0;
           if (amt > 0) {
             measures.push('relative');
-            xLabels.push(p + ' ' + t1);
+            xLabels.push(periodLabel + ' ' + t1);
             yValues.push(-amt);
             running -= amt;
-            textVals.push('<b>-' + compactFmt(amt) + '</b>');
+            textVals.push('<b>-' + compactFmt(amt) + '</b><br>netto: ' + compactFmt(running));
             markerColors.push(TIER1_COLORS[t1] || '#999');
+            hoverTexts.push(t1 + ' ' + periodLabel + '<br>-' + plnFmt(amt) + '<br>Netto: ' + plnFmt(running));
           }
         });
 
         measures.push('total');
-        xLabels.push(p + ' \u2211');
+        xLabels.push(periodLabel);
         yValues.push(running);
         textVals.push('<b>' + compactFmt(running) + '</b>');
         markerColors.push(running >= 0 ? '#4a90d9' : 'hsl(0,60%,50%)');
+        hoverTexts.push('Bilans ' + periodLabel + '<br>' + plnFmt(running));
       });
+
+      var numBars = measures.length;
+      var plotWidth = Math.max(1200, numBars * 42);
+      var plotDiv = document.getElementById('flowing-waterfall-plot');
+      plotDiv.style.width = plotWidth + 'px';
 
       Plotly.react('flowing-waterfall-plot', [{
         type: 'waterfall',
@@ -619,16 +501,19 @@
         text: textVals,
         textposition: 'outside',
         textfont: {size: 10},
+        hovertext: hoverTexts,
+        hoverinfo: 'text',
         connector: {line: {color: 'rgb(63,63,63)', width: 1}},
         marker: {color: markerColors}
       }], {
         title: 'Bilans w czasie (' + (currentFlowGran === 'month' ? 'miesi\u0119cznie' : 'rocznie') + ')',
         yaxis_title: 'Kwota (PLN)',
-        margin: {t: 50, l: 60, r: 20, b: 100},
-        xaxis: {tickangle: -60, type: 'category'},
+        margin: {t: 50, l: 60, r: 20, b: 80},
+        xaxis: {tickangle: -45, type: 'category'},
         separators: ', ',
-        height: 500
-      }, {responsive: true});
+        height: 500,
+        width: plotWidth
+      }, {staticPlot: false});
     }
 
     document.querySelectorAll('.flow-gran-btn').forEach(function(btn) {
@@ -640,57 +525,77 @@
       });
     });
     flowStartInput.addEventListener('change', renderFlowingWaterfall);
+    flowStartMonth.addEventListener('change', renderFlowingWaterfall);
+    flowEndMonth.addEventListener('change', renderFlowingWaterfall);
+    flowResetBtn.addEventListener('click', function() {
+      flowStartMonth.value = fd.month_periods[0];
+      flowEndMonth.value = fd.month_periods[fd.month_periods.length - 1];
+      renderFlowingWaterfall();
+    });
     renderFlowingWaterfall();
   })();
 
   /* ====================================================================
-     6. STATS TABLE — colored rows, depth filter, threshold sliders, collapse
+     5. STATS TABLE — colored rows, depth filter, threshold buttons, collapse
      ==================================================================== */
   (function() {
     var stats = WATERFALL_STATS;
     if (!stats || stats.length === 0) return;
 
-    var maxDepth = 0, maxCount = 0, maxTotal = 0;
-    stats.forEach(function(s) {
-      if (s.depth > maxDepth) maxDepth = s.depth;
-      if (s.count > maxCount) maxCount = s.count;
-      if (s.total > maxTotal) maxTotal = s.total;
-    });
+    var maxDepth = 0;
+    stats.forEach(function(s) { if (s.depth > maxDepth) maxDepth = s.depth; });
 
-    /* Depth buttons */
-    var depthBtnsContainer = document.getElementById('stats-depth-btns');
     var selectedStatsDepth = maxDepth;
-    for (var d = 1; d <= maxDepth; d++) {
-      (function(depth) {
+    var selectedMinCount = 0;
+    var selectedMinTotal = 0;
+
+    function makeButtonRow(container, values, labels, defaultVal, onChange) {
+      values.forEach(function(val, i) {
         var btn = document.createElement('button');
-        btn.className = 'ctrl-btn' + (depth === maxDepth ? ' active' : '');
-        btn.textContent = String(depth);
-        btn.style.padding = '2px 8px';
-        btn.style.fontSize = '12px';
+        btn.className = 'ctrl-btn' + (val === defaultVal ? ' active' : '');
+        btn.textContent = labels[i];
         btn.addEventListener('click', function() {
-          depthBtnsContainer.querySelectorAll('.ctrl-btn').forEach(function(b) { b.classList.remove('active'); });
+          container.querySelectorAll('.ctrl-btn').forEach(function(b) { b.classList.remove('active'); });
           btn.classList.add('active');
-          selectedStatsDepth = depth;
-          applyStatsFilters();
+          onChange(val);
         });
-        depthBtnsContainer.appendChild(btn);
-      })(d);
+        container.appendChild(btn);
+      });
     }
 
-    /* Threshold sliders */
-    var minCountSlider = document.getElementById('stats-min-count');
-    var minTotalSlider = document.getElementById('stats-min-total');
-    var minCountVal = document.getElementById('stats-min-count-val');
-    var minTotalVal = document.getElementById('stats-min-total-val');
-    minCountSlider.max = String(maxCount);
-    minTotalSlider.max = String(Math.ceil(maxTotal));
-    minCountSlider.addEventListener('input', function() { minCountVal.textContent = minCountSlider.value; applyStatsFilters(); });
-    minTotalSlider.addEventListener('input', function() { minTotalVal.textContent = compactFmt(parseFloat(minTotalSlider.value)); applyStatsFilters(); });
+    makeButtonRow(
+      document.getElementById('stats-depth-btns'),
+      Array.from({length: maxDepth}, function(_, i) { return i + 1; }),
+      Array.from({length: maxDepth}, function(_, i) { return String(i + 1); }),
+      maxDepth,
+      function(v) { selectedStatsDepth = v; applyStatsFilters(); }
+    );
+
+    makeButtonRow(
+      document.getElementById('stats-count-btns'),
+      [0, 5, 10, 25, 100],
+      ['0', '5', '10', '25', '100'],
+      0,
+      function(v) { selectedMinCount = v; applyStatsFilters(); }
+    );
+
+    makeButtonRow(
+      document.getElementById('stats-total-btns'),
+      [0, 100, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
+      ['0', '100', '500', '1k', '2k', '5k', '10k', '20k', '50k', '100k'],
+      0,
+      function(v) { selectedMinTotal = v; applyStatsFilters(); }
+    );
 
     var collapseCheck = document.getElementById('stats-collapse-mode');
     collapseCheck.addEventListener('change', applyStatsFilters);
 
-    /* Build table rows */
+    function parseHsl(hsl) {
+      var m = hsl.match(/hsl\((\d+),(\d+)%,(\d+)%\)/);
+      if (!m) return null;
+      return {h: parseInt(m[1]), s: parseInt(m[2]), l: parseInt(m[3])};
+    }
+
     var tbody = document.querySelector('#waterfall-stats tbody');
     var rowEls = [];
     var countSum = 0, totalSum = 0;
@@ -704,9 +609,14 @@
       tr.dataset.tier1 = s.tier1 || '';
       tr.dataset.tierPath = s.tier_path || '';
 
-      var bgColor = TIER1_COLORS[s.tier1] || '';
-      if (bgColor) {
-        tr.style.backgroundColor = bgColor.replace('hsl(', 'hsla(').replace(')', ',0.12)');
+      var baseColor = TIER1_COLORS[s.tier1] || '';
+      if (baseColor) {
+        var parsed = parseHsl(baseColor);
+        if (parsed) {
+          var lightBump = (s.depth - 1) * 8;
+          var newL = Math.min(parsed.l + lightBump, 90);
+          tr.style.backgroundColor = 'hsla(' + parsed.h + ',' + parsed.s + '%,' + newL + '%,0.15)';
+        }
       }
 
       var tdPath = document.createElement('td');
@@ -732,7 +642,6 @@
       tr.append(tdPath, tdAvg, tdCount, tdTotal);
       tbody.appendChild(tr);
       rowEls.push({el: tr, stat: s});
-
       countSum += s.count;
       totalSum += s.total;
     });
@@ -742,40 +651,28 @@
     document.getElementById('stats-total-sum').textContent = numFmt(totalSum);
 
     function applyStatsFilters() {
-      var minCount = parseInt(minCountSlider.value) || 0;
-      var minTotal = parseFloat(minTotalSlider.value) || 0;
       var collapseMode = collapseCheck.checked;
-
-      /* Remove old collapse rows */
       tbody.querySelectorAll('.collapse-row').forEach(function(r) { r.remove(); });
 
-      /* Determine which rows pass filters */
       var parentHidden = {};
       rowEls.forEach(function(r) {
         var s = r.stat;
         var passesDepth = s.depth <= selectedStatsDepth;
-        var passesCount = s.count >= minCount;
-        var passesTotal = s.total >= minTotal;
-        var parentPath = s.tier_path.split(' \u2192 ').slice(0, -1).join(' \u2192 ');
+        var passesCount = s.count >= selectedMinCount;
+        var passesTotal = s.total >= selectedMinTotal;
         var ancestorHidden = false;
         var check = s.tier_path;
         while (check) {
-          var parts = check.split(' \u2192 ');
-          parts.pop();
-          check = parts.join(' \u2192 ');
+          var parts = check.split(' \u2192 '); parts.pop(); check = parts.join(' \u2192 ');
           if (parentHidden[check]) { ancestorHidden = true; break; }
         }
-
         var show = passesDepth && passesCount && passesTotal && !ancestorHidden;
-        if (!show) {
-          parentHidden[s.tier_path] = true;
-        }
+        if (!show) parentHidden[s.tier_path] = true;
         r.visible = show;
         r.el.style.display = show ? '' : 'none';
         r.el.style.fontStyle = '';
       });
 
-      /* Collapse mode: insert summary rows for hidden children */
       if (collapseMode) {
         var grouped = {};
         rowEls.forEach(function(r) {
@@ -788,36 +685,28 @@
           grouped[parentPath].total += s.total;
           grouped[parentPath].sumCount += s.count;
         });
-
         for (var pp in grouped) {
           var g = grouped[pp];
-          /* Find the parent row to insert after */
           var parentRow = null;
           for (var i = 0; i < rowEls.length; i++) {
             if (rowEls[i].stat.tier_path === pp && rowEls[i].visible) { parentRow = rowEls[i].el; break; }
           }
           if (!parentRow) continue;
-
           var cr = document.createElement('tr');
           cr.className = 'collapse-row';
           cr.style.fontStyle = 'italic';
           cr.style.color = '#888';
-
           var bgColor = TIER1_COLORS[pp.split(' \u2192 ')[0]] || '';
-          if (bgColor) cr.style.backgroundColor = bgColor.replace('hsl(', 'hsla(').replace(')', ',0.08)');
-
+          if (bgColor) {
+            var parsed2 = parseHsl(bgColor);
+            if (parsed2) cr.style.backgroundColor = 'hsla(' + parsed2.h + ',' + parsed2.s + '%,' + Math.min(parsed2.l + g.depth * 8, 90) + '%,0.10)';
+          }
           var td1 = document.createElement('td');
           td1.textContent = g.count + ' ukrytych podkategorii';
           td1.style.paddingLeft = (g.depth * 20) + 'px';
-          var td2 = document.createElement('td');
-          td2.className = 'num';
-          td2.textContent = '\u2014';
-          var td3 = document.createElement('td');
-          td3.className = 'num';
-          td3.textContent = g.sumCount;
-          var td4 = document.createElement('td');
-          td4.className = 'num';
-          td4.textContent = numFmt(g.total);
+          var td2 = document.createElement('td'); td2.className = 'num'; td2.textContent = '\u2014';
+          var td3 = document.createElement('td'); td3.className = 'num'; td3.textContent = g.sumCount;
+          var td4 = document.createElement('td'); td4.className = 'num'; td4.textContent = numFmt(g.total);
           cr.append(td1, td2, td3, td4);
           parentRow.after(cr);
         }
@@ -827,7 +716,7 @@
   })();
 
   /* ====================================================================
-     7. SQL PLOTS
+     6. SQL PLOTS
      ==================================================================== */
   var sqlSection = document.getElementById('sec-sql');
   SQL_PLOTS_DATA.forEach(function(plotData, i) {
@@ -840,10 +729,22 @@
   });
 
   /* ====================================================================
-     8. STICKY NAV — active section highlighting
+     7. SIDEBAR NAV — toggle + IntersectionObserver
      ==================================================================== */
   (function() {
-    var navLinks = document.querySelectorAll('.top-nav a');
+    var toggle = document.getElementById('nav-toggle');
+    var backdrop = document.getElementById('nav-backdrop');
+    var sideNav = document.getElementById('side-nav');
+
+    function openNav() { sideNav.classList.add('open'); backdrop.classList.add('open'); }
+    function closeNav() { sideNav.classList.remove('open'); backdrop.classList.remove('open'); }
+
+    toggle.addEventListener('click', function() {
+      sideNav.classList.contains('open') ? closeNav() : openNav();
+    });
+    backdrop.addEventListener('click', closeNav);
+
+    var navLinks = sideNav.querySelectorAll('a');
     var sections = [];
     navLinks.forEach(function(link) {
       var id = link.getAttribute('href').slice(1);
@@ -851,6 +752,7 @@
       if (el) sections.push({id: id, el: el, link: link});
       link.addEventListener('click', function(e) {
         e.preventDefault();
+        closeNav();
         if (el) el.scrollIntoView({behavior: 'smooth'});
       });
     });
@@ -870,8 +772,7 @@
         var s = sections.find(function(sec) { return sec.el === best; });
         if (s) s.link.classList.add('active');
       }
-    }, {rootMargin: '-60px 0px -40% 0px', threshold: [0, 0.25, 0.5, 0.75, 1]});
-
+    }, {rootMargin: '0px 0px -40% 0px', threshold: [0, 0.25, 0.5, 0.75, 1]});
     sections.forEach(function(s) { observer.observe(s.el); });
   })();
   </script>

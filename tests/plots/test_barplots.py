@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from plots.barplots import create_barplots_per_tier1
 
 
@@ -18,6 +17,12 @@ class TestBarplotsPerTier1:
         result = create_barplots_per_tier1(preprocessed_expense_df)
         for fig in result.values():
             assert fig.layout.showlegend is True
+
+    def test_all_traces_show_legend(self, preprocessed_expense_df):
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        for fig in result.values():
+            for trace in fig.data:
+                assert trace.showlegend is True
 
     def test_keys_are_tier1_values(self, preprocessed_expense_df):
         result = create_barplots_per_tier1(preprocessed_expense_df)

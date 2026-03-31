@@ -61,7 +61,6 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
         g_df = df[df[group_col] == g]
         fig = go.Figure()
         trace_ranges: dict[str, tuple[int, int]] = {}
-        seen_legendgroups: set[str] = set()
 
         for gran in granularities:
             start_idx = len(fig.data)
@@ -70,14 +69,11 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
             if single_tier:
                 subset = agg.sort_values("Period")
                 display_name = path_lookup.get(g, g)
-                first = g not in seen_legendgroups
-                seen_legendgroups.add(g)
                 fig.add_trace(go.Bar(
                     x=subset["PeriodLabel"],
                     y=subset[amount_col],
                     name=display_name,
-                    legendgroup=g,
-                    showlegend=first,
+                    showlegend=True,
                     visible=(gran == "month"),
                     hovertemplate=f"{display_name}<br>%{{y:,.2f}} PLN<extra></extra>",
                     text=subset[amount_col].apply(compact_fmt),
@@ -93,14 +89,11 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
                 for sv in stack_vals:
                     subset = agg[agg[stack_col] == sv].sort_values("Period")
                     display_name = path_lookup.get(str(sv), str(sv))
-                    first = str(sv) not in seen_legendgroups
-                    seen_legendgroups.add(str(sv))
                     fig.add_trace(go.Bar(
                         x=subset["PeriodLabel"],
                         y=subset[amount_col],
                         name=display_name,
-                        legendgroup=str(sv),
-                        showlegend=first,
+                        showlegend=True,
                         visible=(gran == "month"),
                         hovertemplate=f"{display_name}<br>%{{y:,.2f}} PLN<extra></extra>",
                         text=subset[amount_col].apply(compact_fmt),

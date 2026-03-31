@@ -16,9 +16,7 @@ from plots.sunburst import sunburst_data_to_json
 from plots.barplots import create_barplots_per_tier1
 from plots.income import (
     create_income_barplot,
-    create_waterfall,
     waterfall_stats_to_json,
-    build_waterfall_source_data,
     build_flowing_waterfall_data,
 )
 from plots.colors import tier1_color_map
@@ -49,10 +47,8 @@ def main() -> None:
     sunburst_frames_json = sunburst_data_to_json(expense_df)
     barplots_dict = create_barplots_per_tier1(expense_df)
     income_fig = create_income_barplot(income_df)
-    waterfall_fig = create_waterfall(income_df, expense_df)
     sql_figs = create_sql_plots(expense_df, income_df)
     stats_json = waterfall_stats_to_json(expense_df)
-    waterfall_source_json = build_waterfall_source_data(income_df, expense_df)
     flowing_waterfall_json = build_flowing_waterfall_data(income_df, expense_df)
     t1_colors_json = json.dumps(tier1_color_map(expense_df))
 
@@ -63,10 +59,8 @@ def main() -> None:
         sunburst_frames_json=sunburst_frames_json,
         barplots_dict=barplots_dict,
         income_fig=income_fig,
-        waterfall_fig=waterfall_fig,
         sql_plot_figs=sql_figs,
         waterfall_stats_json=stats_json,
-        waterfall_source_json=waterfall_source_json,
         flowing_waterfall_json=flowing_waterfall_json,
         tier1_colors_json=t1_colors_json,
         output_path=dist_dir / "output.html",
