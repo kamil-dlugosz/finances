@@ -437,72 +437,80 @@
       var periods = allPeriods.filter(function(p) { return p >= startM && p <= endM; });
 
       var tier1Names = fd.tier1_order || Object.keys(expByT1Period);
-      var measures = [], xLabels = [], yValues = [], textVals = [], markerColors = [], hoverTexts = [];
+      var xLabels = [], bases = [], heights = [], textVals = [], markerColors = [], hoverTexts = [];
       var running = startAmount;
       var zwsp = '\u200B';
+      var connectorShapes = [];
 
-      measures.push('absolute');
       xLabels.push('Start');
-      yValues.push(startAmount);
+      bases.push(0);
+      heights.push(startAmount);
       textVals.push(compactFmt(startAmount));
       markerColors.push('#888');
       hoverTexts.push('Kwota pocz\u0105tkowa<br>' + plnFmt(startAmount));
+
+      var prevTop = startAmount;
 
       periods.forEach(function(p, periodIndex) {
         var periodLabel = currentFlowGran === 'month' ? shortMonth(p) : p;
         var suffix = Array(periodIndex + 1).join(zwsp);
         var inc = incByPeriod[p] || 0;
         if (inc > 0) {
-          measures.push('relative');
-          xLabels.push('+' + suffix);
-          yValues.push(inc);
+          var baseBefore = running;
           running += inc;
+          xLabels.push('+' + suffix);
+          bases.push(baseBefore);
+          heights.push(inc);
           textVals.push('+' + compactFmt(inc));
           markerColors.push('hsl(130,55%,42%)');
           hoverTexts.push('Przychody ' + periodLabel + '<br>+' + plnFmt(inc) + '<br>Netto: ' + plnFmt(running));
+          connectorShapes.push({type: 'line', x0: xLabels.length - 2, x1: xLabels.length - 1, y0: prevTop, y1: prevTop, xref: 'x', yref: 'y', line: {color: 'rgb(63,63,63)', width: 1}});
+          prevTop = running;
         }
 
         tier1Names.forEach(function(t1) {
           var amt = (expByT1Period[t1] || {})[p] || 0;
           if (amt > 0) {
-            measures.push('relative');
-            xLabels.push(t1 + suffix);
-            yValues.push(-amt);
             running -= amt;
+            xLabels.push(t1 + suffix);
+            bases.push(running);
+            heights.push(amt);
             textVals.push('-' + compactFmt(amt));
             markerColors.push(TIER1_COLORS[t1] || '#999');
             hoverTexts.push(t1 + ' ' + periodLabel + '<br>-' + plnFmt(amt) + '<br>Netto: ' + plnFmt(running));
+            connectorShapes.push({type: 'line', x0: xLabels.length - 2, x1: xLabels.length - 1, y0: prevTop, y1: prevTop, xref: 'x', yref: 'y', line: {color: 'rgb(63,63,63)', width: 1}});
+            prevTop = running;
           }
         });
 
-        measures.push('total');
         xLabels.push(periodLabel + suffix);
-        yValues.push(running);
+        bases.push(0);
+        heights.push(running);
         textVals.push(compactFmt(running));
         markerColors.push(running >= 0 ? '#4a90d9' : 'hsl(0,60%,50%)');
         hoverTexts.push('Bilans ' + periodLabel + '<br>' + plnFmt(running));
+        connectorShapes.push({type: 'line', x0: xLabels.length - 2, x1: xLabels.length - 1, y0: prevTop, y1: prevTop, xref: 'x', yref: 'y', line: {color: 'rgb(63,63,63)', width: 1}});
+        prevTop = running;
       });
 
-      var numBars = measures.length;
+      var numBars = xLabels.length;
       var plotWidth = Math.max(1200, numBars * 42);
       var plotDiv = document.getElementById('flowing-waterfall-plot');
       plotDiv.style.width = plotWidth + 'px';
 
       Plotly.react('flowing-waterfall-plot', [{
-        type: 'waterfall',
-        measure: measures,
+        type: 'bar',
         x: xLabels,
-        y: yValues,
+        y: heights,
+        base: bases,
         text: textVals,
         textposition: 'outside',
         textangle: -90,
         textfont: {size: 12},
         hovertext: hoverTexts,
         hoverinfo: 'text',
-        connector: {line: {color: 'rgb(63,63,63)', width: 1}},
         marker: {color: markerColors},
-        increasing: {marker: {color: 'rgba(0,0,0,0)'}},
-        decreasing: {marker: {color: 'rgba(0,0,0,0)'}}
+        showlegend: false
       }], {
         title: 'Bilans w czasie (' + (currentFlowGran === 'month' ? 'miesi\u0119cznie' : 'rocznie') + ')',
         yaxis_title: 'Kwota (PLN)',
@@ -510,7 +518,9 @@
         xaxis: {tickangle: -45, type: 'category'},
         separators: ', ',
         height: 500,
-        width: plotWidth
+        width: plotWidth,
+        shapes: connectorShapes,
+        bargap: 0.15
       }, {staticPlot: false});
     }
 
