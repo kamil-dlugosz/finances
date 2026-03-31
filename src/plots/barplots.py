@@ -137,7 +137,7 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
         fig.update_layout(
             barmode="stack",
             showlegend=True,
-            legend=dict(font=dict(size=10), tracegroupgap=6),
+            legend=dict(font=dict(size=10), tracegroupgap=6, groupclick="togglegroup"),
             title=dict(text=g, font=dict(size=14)),
             updatemenus=[{
                 "type": "buttons",
