@@ -47,10 +47,12 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
 
     tier_cols = [f"Tier{d}" for d in range(1, depth + 1)]
     path_lookup: dict[str, str] = {}
+    display_lookup: dict[str, str] = {}
     for _, row in df.drop_duplicates(subset=tier_cols, keep="first").iterrows():
         leaf = str(row[stack_col])
         parts = [str(row[c]) for c in tier_cols]
         path_lookup[leaf] = " > ".join(parts)
+        display_lookup[leaf] = " > ".join(parts[1:]) if len(parts) > 1 else parts[0]
 
     group_vals = sorted(df[group_col].dropna().unique(), reverse=True)
     granularities = ["year", "quarter", "month", "week"]
@@ -68,7 +70,7 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
 
             if single_tier:
                 subset = agg.sort_values("Period")
-                display_name = path_lookup.get(g, g)
+                display_name = display_lookup.get(g, g)
                 fig.add_trace(go.Bar(
                     x=subset["PeriodLabel"],
                     y=subset[amount_col],
@@ -88,7 +90,7 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
                 )
                 for sv in stack_vals:
                     subset = agg[agg[stack_col] == sv].sort_values("Period")
-                    display_name = path_lookup.get(str(sv), str(sv))
+                    display_name = display_lookup.get(str(sv), str(sv))
                     fig.add_trace(go.Bar(
                         x=subset["PeriodLabel"],
                         y=subset[amount_col],
