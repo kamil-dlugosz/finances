@@ -219,6 +219,18 @@ def build_flowing_waterfall_data(
     for v in sorted(present_tier1 - set(tier1_order)):
         tier1_order.append(v)
 
+    leaf_col = f"Tier{tree.tier_depth}"
+    expense_by_leaf_month: dict[str, dict[str, float]] = {}
+    for leaf, grp in exp.groupby(leaf_col):
+        expense_by_leaf_month[str(leaf)] = {
+            k: round(v, 2) for k, v in grp.groupby("_month")[amount_col].sum().to_dict().items()
+        }
+    expense_by_leaf_year: dict[str, dict[str, float]] = {}
+    for leaf, grp in exp.groupby(leaf_col):
+        expense_by_leaf_year[str(leaf)] = {
+            k: round(v, 2) for k, v in grp.groupby("_year")[amount_col].sum().to_dict().items()
+        }
+
     return json.dumps({
         "month_periods": all_months,
         "year_periods": all_years,
@@ -226,5 +238,7 @@ def build_flowing_waterfall_data(
         "income_by_year": {k: round(v, 2) for k, v in income_by_year.items()},
         "expense_by_tier1_month": expense_by_t1_month,
         "expense_by_tier1_year": expense_by_t1_year,
+        "expense_by_leaf_month": expense_by_leaf_month,
+        "expense_by_leaf_year": expense_by_leaf_year,
         "tier1_order": tier1_order,
     })

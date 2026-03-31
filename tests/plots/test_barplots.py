@@ -52,3 +52,14 @@ class TestBarplotsPerTier1:
             for trace in fig.data:
                 if hasattr(trace, "text") and trace.text is not None:
                     break
+
+    def test_legend_grouping(self, preprocessed_expense_df):
+        from config import get_tier_tree
+        tree = get_tier_tree()
+        if tree.tier_depth < 3:
+            return
+        result = create_barplots_per_tier1(preprocessed_expense_df)
+        for fig in result.values():
+            for trace in fig.data:
+                if trace.legendgroup:
+                    assert " > " not in trace.name, "Legend item should be leaf-only"

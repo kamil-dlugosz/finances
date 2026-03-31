@@ -321,13 +321,13 @@
     if (flat.colors.length) trace.marker = {colors: flat.colors};
     var dummyTraces = LEAF_TIER_PATHS.map(function(t) {
       var parts = t.path.split(' > ');
-      var group = parts[0];
-      var shortName = parts.slice(1).join(' > ');
+      var leafName = parts[parts.length - 1];
+      var groupPath = parts.slice(0, -1).join(' > ');
       return {
         x: [null], y: [null], type: 'scatter', mode: 'markers', marker: {size: 8},
-        name: shortName || group,
-        legendgroup: group,
-        legendgrouptitle: {text: group, font: {size: 12, weight: 'bold'}},
+        name: leafName,
+        legendgroup: groupPath || leafName,
+        legendgrouptitle: {text: groupPath || leafName, font: {size: 12, weight: 'bold'}},
         visible: hiddenLeafTiers.has(t.name) ? 'legendonly' : true, showlegend: true
       };
     });
@@ -431,12 +431,18 @@
     flowEndMonth.min = fd.month_periods[0];
     flowEndMonth.max = fd.month_periods[fd.month_periods.length - 1];
 
+    var hiddenFlowLeafTiers = new Set();
+    var leafToTier1 = {};
+    LEAF_TIER_PATHS.forEach(function(t) {
+      leafToTier1[t.name] = t.path.split(' > ')[0];
+    });
+
     function renderFlowingWaterfall() {
       localStorage.setItem('flowing_start_amount', flowStartInput.value);
       var startAmount = parseFloat(flowStartInput.value) || 0;
       var allPeriods = currentFlowGran === 'month' ? (fd.month_periods || []) : (fd.year_periods || []);
       var incByPeriod = currentFlowGran === 'month' ? (fd.income_by_month || {}) : (fd.income_by_year || {});
-      var expByT1Period = currentFlowGran === 'month' ? (fd.expense_by_tier1_month || {}) : (fd.expense_by_tier1_year || {});
+      var leafExpByPeriod = currentFlowGran === 'month' ? (fd.expense_by_leaf_month || {}) : (fd.expense_by_leaf_year || {});
 
       var startM = flowStartMonth.value || allPeriods[0];
       var endM = flowEndMonth.value || allPeriods[allPeriods.length - 1];
@@ -449,7 +455,7 @@
         periods = allPeriods.filter(function(p) { return p >= startM && p <= endM; });
       }
 
-      var tier1Names = fd.tier1_order || Object.keys(expByT1Period);
+      var tier1Names = fd.tier1_order || Object.keys(fd.expense_by_tier1_month || {});
       var xLabels = [], bases = [], heights = [], textVals = [], markerColors = [], hoverTexts = [];
       var markerPatterns = [];
       var subtotalTickvals = [], subtotalTicktext = [];
@@ -486,7 +492,12 @@
         }
 
         tier1Names.forEach(function(t1) {
-          var amt = (expByT1Period[t1] || {})[p] || 0;
+          var amt = 0;
+          LEAF_TIER_PATHS.forEach(function(t) {
+            if (leafToTier1[t.name] !== t1) return;
+            if (hiddenFlowLeafTiers.has(t.name)) return;
+            amt += (leafExpByPeriod[t.name] || {})[p] || 0;
+          });
           if (amt > 0) {
             running -= amt;
             xLabels.push(t1 + suffix);
@@ -516,16 +527,18 @@
       });
 
       var numBars = xLabels.length;
-      var plotWidth = Math.max(1200, numBars * 42);
+      var barAreaWidth = Math.max(1200, numBars * 42);
+      var legendExtra = 280;
+      var totalWidth = barAreaWidth + legendExtra;
       var plotDiv = document.getElementById('flowing-waterfall-plot');
-      plotDiv.style.width = plotWidth + 'px';
+      plotDiv.style.width = totalWidth + 'px';
 
       var allVals = bases.map(function(b, i) { return b + heights[i]; });
       var yMax = Math.max.apply(null, allVals);
       var yMin = Math.min.apply(null, bases);
       var plotHeight = Math.min(700, Math.max(500, 500 + Math.round((yMax - yMin) * 0.003)));
 
-      Plotly.react('flowing-waterfall-plot', [{
+      var barTrace = {
         type: 'bar',
         x: xLabels,
         y: heights,
@@ -539,14 +552,34 @@
         hoverinfo: 'text',
         marker: {color: markerColors, pattern: {shape: markerPatterns, solidity: 0.3}},
         showlegend: false
-      }], {
+      };
+
+      var flowDummyTraces = LEAF_TIER_PATHS.map(function(t) {
+        var parts = t.path.split(' > ');
+        var leafName = parts[parts.length - 1];
+        var groupPath = parts.slice(0, -1).join(' > ');
+        var tier1 = parts[0];
+        return {
+          x: [null], y: [null], type: 'scatter', mode: 'markers',
+          marker: {size: 8, color: TIER1_COLORS[tier1] || '#999'},
+          name: leafName,
+          legendgroup: groupPath || leafName,
+          legendgrouptitle: {text: groupPath || leafName, font: {size: 12, weight: 'bold'}},
+          visible: hiddenFlowLeafTiers.has(t.name) ? 'legendonly' : true,
+          showlegend: true
+        };
+      });
+
+      Plotly.react('flowing-waterfall-plot', [barTrace].concat(flowDummyTraces), {
         title: 'Bilans w czasie (' + (currentFlowGran === 'month' ? 'miesi\u0119cznie' : 'rocznie') + ')',
         yaxis_title: 'Kwota (PLN)',
-        margin: {t: 50, l: 60, r: 20, b: 80},
+        margin: {t: 50, l: 60, r: legendExtra, b: 80},
         xaxis: {tickvals: subtotalTickvals, ticktext: subtotalTicktext, tickangle: -45, type: 'category'},
+        showlegend: true,
+        legend: {tracegroupgap: 8, font: {size: 11}},
         separators: ', ',
         height: plotHeight,
-        width: plotWidth,
+        width: totalWidth,
         shapes: connectorShapes,
         bargap: 0.15,
         uniformtext: {minsize: 14, mode: 'show'}
@@ -570,6 +603,17 @@
       renderFlowingWaterfall();
     });
     renderFlowingWaterfall();
+
+    document.getElementById('flowing-waterfall-plot').on('plotly_legendclick', function(evtData) {
+      if (evtData.curveNumber === 0) return false;
+      var leafIdx = evtData.curveNumber - 1;
+      if (leafIdx < 0 || leafIdx >= LEAF_TIER_PATHS.length) return false;
+      var tierName = LEAF_TIER_PATHS[leafIdx].name;
+      if (hiddenFlowLeafTiers.has(tierName)) hiddenFlowLeafTiers.delete(tierName);
+      else hiddenFlowLeafTiers.add(tierName);
+      renderFlowingWaterfall();
+      return false;
+    });
   })();
 
   /* ====================================================================

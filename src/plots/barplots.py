@@ -97,10 +97,13 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
                 for sv in stack_vals:
                     subset = agg[agg[stack_col] == sv].sort_values("Period")
                     display_name = display_lookup.get(str(sv), str(sv))
-                    fig.add_trace(go.Bar(
+                    dn_parts = display_name.split(" > ")
+                    leaf_label = dn_parts[-1]
+                    group_label = " > ".join(dn_parts[:-1]) if len(dn_parts) > 1 else ""
+                    trace_kwargs: dict = dict(
                         x=subset["PeriodLabel"],
                         y=subset[amount_col],
-                        name=display_name,
+                        name=leaf_label,
                         showlegend=True,
                         visible=(gran == "month"),
                         hovertemplate=f"{display_name}<br>%{{y:,.2f}} PLN<extra></extra>",
@@ -108,7 +111,13 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
                         textposition="inside",
                         textangle=0,
                         textfont=dict(size=10),
-                    ))
+                    )
+                    if group_label:
+                        trace_kwargs["legendgroup"] = group_label
+                        trace_kwargs["legendgrouptitle"] = dict(
+                            text=group_label, font=dict(size=11),
+                        )
+                    fig.add_trace(go.Bar(**trace_kwargs))
 
             trace_ranges[gran] = (start_idx, len(fig.data))
 
@@ -128,7 +137,7 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
         fig.update_layout(
             barmode="stack",
             showlegend=True,
-            legend=dict(font=dict(size=10)),
+            legend=dict(font=dict(size=10), tracegroupgap=6),
             title=dict(text=g, font=dict(size=14)),
             updatemenus=[{
                 "type": "buttons",

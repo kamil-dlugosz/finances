@@ -90,3 +90,12 @@ class TestFlowingWaterfall:
         assert "tier1_order" in data
         assert isinstance(data["tier1_order"], list)
         assert len(data["tier1_order"]) > 0
+
+    def test_leaf_expense_data_present(self, sample_income_df, preprocessed_expense_df):
+        raw = build_flowing_waterfall_data(sample_income_df, preprocessed_expense_df)
+        data = json.loads(raw)
+        assert "expense_by_leaf_month" in data
+        assert "expense_by_leaf_year" in data
+        assert isinstance(data["expense_by_leaf_month"], dict)
+        assert isinstance(data["expense_by_leaf_year"], dict)
+        assert len(data["expense_by_leaf_month"]) > 0
