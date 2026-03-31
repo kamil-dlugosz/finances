@@ -12,7 +12,7 @@
     .section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 20px; }
     .section h2 { font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid #4a90d9; padding-bottom: 6px; }
     .plot-container { width: 100%; }
-    #sunburst-plot { min-height: 750px; overflow-y: auto; max-height: 850px; }
+    #sunburst-plot { min-height: 900px; }
     .stats-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
     .stats-table th { background: #f0f0f0; font-weight: 600; }
@@ -228,8 +228,8 @@
   var sunburstMaxDepth = MAX_SUNBURST_DEPTH;
 
   var SUNBURST_LAYOUT = {
-    margin: {t: 40, l: 20, r: 20, b: 20}, height: 750, showlegend: true,
-    legend: {y: 0.5, yanchor: 'middle', font: {size: 11}},
+    margin: {t: 40, l: 20, r: 20, b: 20}, height: 900, showlegend: true,
+    legend: {y: 0.5, yanchor: 'middle', font: {size: 11}, itemsizing: 'constant'},
     xaxis: {visible: false}, yaxis: {visible: false}
   };
 
@@ -434,10 +434,19 @@
 
       var startM = flowStartMonth.value || allPeriods[0];
       var endM = flowEndMonth.value || allPeriods[allPeriods.length - 1];
-      var periods = allPeriods.filter(function(p) { return p >= startM && p <= endM; });
+      var periods;
+      if (currentFlowGran === 'year') {
+        var startY = startM.slice(0, 4);
+        var endY = endM.slice(0, 4);
+        periods = allPeriods.filter(function(p) { return p >= startY && p <= endY; });
+      } else {
+        periods = allPeriods.filter(function(p) { return p >= startM && p <= endM; });
+      }
 
       var tier1Names = fd.tier1_order || Object.keys(expByT1Period);
       var xLabels = [], bases = [], heights = [], textVals = [], markerColors = [], hoverTexts = [];
+      var markerPatterns = [];
+      var subtotalTickvals = [], subtotalTicktext = [];
       var running = startAmount;
       var zwsp = '\u200B';
       var connectorShapes = [];
@@ -447,6 +456,7 @@
       heights.push(startAmount);
       textVals.push(compactFmt(startAmount));
       markerColors.push('#888');
+      markerPatterns.push('');
       hoverTexts.push('Kwota pocz\u0105tkowa<br>' + plnFmt(startAmount));
 
       var prevTop = startAmount;
@@ -463,6 +473,7 @@
           heights.push(inc);
           textVals.push('+' + compactFmt(inc));
           markerColors.push('hsl(130,55%,42%)');
+          markerPatterns.push('');
           hoverTexts.push('Przychody ' + periodLabel + '<br>+' + plnFmt(inc) + '<br>Netto: ' + plnFmt(running));
           connectorShapes.push({type: 'line', x0: xLabels.length - 2, x1: xLabels.length - 1, y0: prevTop, y1: prevTop, xref: 'x', yref: 'y', line: {color: 'rgb(63,63,63)', width: 1}});
           prevTop = running;
@@ -477,18 +488,23 @@
             heights.push(amt);
             textVals.push('-' + compactFmt(amt));
             markerColors.push(TIER1_COLORS[t1] || '#999');
+            markerPatterns.push('');
             hoverTexts.push(t1 + ' ' + periodLabel + '<br>-' + plnFmt(amt) + '<br>Netto: ' + plnFmt(running));
             connectorShapes.push({type: 'line', x0: xLabels.length - 2, x1: xLabels.length - 1, y0: prevTop, y1: prevTop, xref: 'x', yref: 'y', line: {color: 'rgb(63,63,63)', width: 1}});
             prevTop = running;
           }
         });
 
-        xLabels.push(periodLabel + suffix);
+        var subtotalLabel = periodLabel + suffix;
+        xLabels.push(subtotalLabel);
         bases.push(0);
         heights.push(running);
-        textVals.push(compactFmt(running));
-        markerColors.push(running >= 0 ? '#4a90d9' : 'hsl(0,60%,50%)');
+        textVals.push('<b>netto: ' + compactFmt(running) + '</b>');
+        markerColors.push('rgba(200,200,200,0.3)');
+        markerPatterns.push('/');
         hoverTexts.push('Bilans ' + periodLabel + '<br>' + plnFmt(running));
+        subtotalTickvals.push(subtotalLabel);
+        subtotalTicktext.push(periodLabel);
         connectorShapes.push({type: 'line', x0: xLabels.length - 2, x1: xLabels.length - 1, y0: prevTop, y1: prevTop, xref: 'x', yref: 'y', line: {color: 'rgb(63,63,63)', width: 1}});
         prevTop = running;
       });
@@ -498,6 +514,11 @@
       var plotDiv = document.getElementById('flowing-waterfall-plot');
       plotDiv.style.width = plotWidth + 'px';
 
+      var allVals = bases.map(function(b, i) { return b + heights[i]; });
+      var yMax = Math.max.apply(null, allVals);
+      var yMin = Math.min.apply(null, bases);
+      var plotHeight = Math.max(500, Math.round((yMax - yMin) * 0.015) + 400);
+
       Plotly.react('flowing-waterfall-plot', [{
         type: 'bar',
         x: xLabels,
@@ -505,19 +526,20 @@
         base: bases,
         text: textVals,
         textposition: 'outside',
-        textangle: -90,
-        textfont: {size: 12},
+        textangle: -75,
+        textfont: {size: 14},
+        cliponaxis: false,
         hovertext: hoverTexts,
         hoverinfo: 'text',
-        marker: {color: markerColors},
+        marker: {color: markerColors, pattern: {shape: markerPatterns, solidity: 0.3}},
         showlegend: false
       }], {
         title: 'Bilans w czasie (' + (currentFlowGran === 'month' ? 'miesi\u0119cznie' : 'rocznie') + ')',
         yaxis_title: 'Kwota (PLN)',
         margin: {t: 50, l: 60, r: 20, b: 80},
-        xaxis: {tickangle: -45, type: 'category'},
+        xaxis: {tickvals: subtotalTickvals, ticktext: subtotalTicktext, tickangle: -45, type: 'category'},
         separators: ', ',
-        height: 500,
+        height: plotHeight,
         width: plotWidth,
         shapes: connectorShapes,
         bargap: 0.15
