@@ -170,7 +170,11 @@ def sunburst_data_to_json(df: pd.DataFrame) -> str:
     dim_count = len(cfg.hierarchy.dimensions)
     max_depth = dim_count + tree.tier_depth
     leaf_col = f"Tier{tree.tier_depth}"
-    leaf_tiers = sorted(df[leaf_col].dropna().unique().tolist()) if leaf_col in df.columns else []
+    config_leaves = tree.ordered_leaves
+    present_leaves = set(df[leaf_col].dropna().unique().tolist()) if leaf_col in df.columns else set()
+    leaf_tiers = [v for v in config_leaves if v in present_leaves]
+    for v in sorted(present_leaves - set(leaf_tiers)):
+        leaf_tiers.append(v)
 
     tier_cols = [f"Tier{d}" for d in range(1, tree.tier_depth + 1)]
     path_lookup: dict[str, str] = {}
@@ -178,10 +182,9 @@ def sunburst_data_to_json(df: pd.DataFrame) -> str:
         leaf_val = str(row[leaf_col])
         parts = [str(row[c]) for c in tier_cols]
         path_lookup[leaf_val] = " > ".join(parts)
-    leaf_tier_paths = sorted(
-        [{"name": n, "path": path_lookup.get(n, n)} for n in leaf_tiers],
-        key=lambda x: x["path"],
-    )
+    leaf_tier_paths = [
+        {"name": n, "path": path_lookup.get(n, n)} for n in leaf_tiers
+    ]
 
     t1_colors = tier1_color_map(df)
 

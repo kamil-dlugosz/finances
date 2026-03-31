@@ -4,6 +4,8 @@ import math
 
 import pandas as pd
 
+from config import get_tier_tree
+
 TIER1_PALETTE = [
     "hsl(210,60%,50%)",
     "hsl(30,70%,50%)",
@@ -20,8 +22,11 @@ TX_OPACITY = 0.45
 
 
 def tier1_color_map(df: pd.DataFrame) -> dict[str, str]:
-    """Return a deterministic mapping of sorted Tier1 values to palette colours."""
-    tier1_vals = sorted(df["Tier1"].dropna().unique())
+    """Return a deterministic mapping of Tier1 values to palette colours in config order."""
+    present = set(df["Tier1"].dropna().unique())
+    tier1_vals = [v for v in get_tier_tree().tier_order(1) if v in present]
+    for v in sorted(present - set(tier1_vals)):
+        tier1_vals.append(v)
     return {v: TIER1_PALETTE[i % len(TIER1_PALETTE)] for i, v in enumerate(tier1_vals)}
 
 

@@ -123,7 +123,16 @@ def build_waterfall_stats(expense_df: pd.DataFrame) -> list[dict]:
                 "total": round(float(row["sum"]), 2),
             })
 
-    stats.sort(key=lambda s: s["tier_path"])
+    order_by_depth: dict[int, dict[str, int]] = {}
+    tree = get_tier_tree()
+    for d in range(1, depth + 1):
+        order_by_depth[d] = {v: i for i, v in enumerate(tree.tier_order(d))}
+
+    def _sort_key(s: dict) -> tuple:
+        parts = s["tier_path"].split(" \u2192 ")
+        return tuple(order_by_depth.get(d + 1, {}).get(p, 999) for d, p in enumerate(parts))
+
+    stats.sort(key=_sort_key)
     return stats
 
 
@@ -203,6 +212,13 @@ def build_flowing_waterfall_data(
         {y for d in expense_by_t1_year.values() for y in d}
     )
 
+    tree = get_tier_tree()
+    config_tier1 = tree.tier_order(1)
+    present_tier1 = set(expense_by_t1_month.keys()) | set(expense_by_t1_year.keys())
+    tier1_order = [v for v in config_tier1 if v in present_tier1]
+    for v in sorted(present_tier1 - set(tier1_order)):
+        tier1_order.append(v)
+
     return json.dumps({
         "month_periods": all_months,
         "year_periods": all_years,
@@ -210,4 +226,5 @@ def build_flowing_waterfall_data(
         "income_by_year": {k: round(v, 2) for k, v in income_by_year.items()},
         "expense_by_tier1_month": expense_by_t1_month,
         "expense_by_tier1_year": expense_by_t1_year,
+        "tier1_order": tier1_order,
     })

@@ -49,10 +49,11 @@ class TestWaterfallStats:
             assert s["avg_amount"] >= 0
             assert s["count"] > 0
 
-    def test_stats_sorted_by_path(self, preprocessed_expense_df):
+    def test_stats_sorted_by_config_order(self, preprocessed_expense_df):
         stats = build_waterfall_stats(preprocessed_expense_df)
         paths = [s["tier_path"] for s in stats]
-        assert paths == sorted(paths)
+        assert len(paths) > 0
+        assert paths[0].startswith("Utrzymanie")
 
     def test_stats_depth_matches_path(self, preprocessed_expense_df):
         stats = build_waterfall_stats(preprocessed_expense_df)
@@ -82,3 +83,10 @@ class TestFlowingWaterfall:
         data = json.loads(raw)
         assert data["month_periods"] == sorted(data["month_periods"])
         assert data["year_periods"] == sorted(data["year_periods"])
+
+    def test_tier1_order_present(self, sample_income_df, preprocessed_expense_df):
+        raw = build_flowing_waterfall_data(sample_income_df, preprocessed_expense_df)
+        data = json.loads(raw)
+        assert "tier1_order" in data
+        assert isinstance(data["tier1_order"], list)
+        assert len(data["tier1_order"]) > 0

@@ -21,7 +21,9 @@ class TierTree:
     def _build(self, tiers: TierNode) -> None:
         lookup: dict[str, tuple[str, ...]] = {}
         values_per_level: dict[int, set[str]] = defaultdict(set)
+        ordered_per_level: dict[int, list[str]] = defaultdict(list)
         leaf_depths: set[int] = set()
+        ordered_leaves: list[str] = []
 
         def walk(node: TierNode, path: tuple[str, ...] = (), depth: int = 1) -> None:
             if isinstance(node, dict):
@@ -29,6 +31,7 @@ class TierTree:
                     if key in values_per_level[depth]:
                         raise ValueError(f"Duplicate value '{key}' at tier depth {depth}")
                     values_per_level[depth].add(key)
+                    ordered_per_level[depth].append(key)
                     walk(child, path + (key,), depth + 1)
             elif isinstance(node, list):
                 leaf_depths.add(depth)
@@ -36,6 +39,8 @@ class TierTree:
                     if leaf in values_per_level[depth]:
                         raise ValueError(f"Duplicate leaf '{leaf}' at tier depth {depth}")
                     values_per_level[depth].add(leaf)
+                    ordered_per_level[depth].append(leaf)
+                    ordered_leaves.append(leaf)
                     lookup[leaf] = path + (leaf,)
             else:
                 raise TypeError(f"Invalid node type {type(node)}; expected dict or list")
@@ -47,6 +52,8 @@ class TierTree:
 
         self._lookup = lookup
         self._tier_depth = leaf_depths.pop()
+        self._ordered_per_level = dict(ordered_per_level)
+        self._ordered_leaves = ordered_leaves
 
     @property
     def tier_depth(self) -> int:
@@ -60,6 +67,15 @@ class TierTree:
 
     def contains(self, leaf: str) -> bool:
         return leaf in self._lookup
+
+    def tier_order(self, depth: int) -> list[str]:
+        """Return tier values at *depth* in config-defined insertion order."""
+        return list(self._ordered_per_level.get(depth, []))
+
+    @property
+    def ordered_leaves(self) -> list[str]:
+        """All leaf-tier values in config-defined order."""
+        return list(self._ordered_leaves)
 
 
 class PathsConfig(BaseModel):

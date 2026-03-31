@@ -436,9 +436,10 @@
       var endM = flowEndMonth.value || allPeriods[allPeriods.length - 1];
       var periods = allPeriods.filter(function(p) { return p >= startM && p <= endM; });
 
-      var tier1Names = Object.keys(expByT1Period).sort();
+      var tier1Names = fd.tier1_order || Object.keys(expByT1Period);
       var measures = [], xLabels = [], yValues = [], textVals = [], markerColors = [], hoverTexts = [];
       var running = startAmount;
+      var zwsp = '\u200B';
 
       measures.push('absolute');
       xLabels.push('Start');
@@ -447,12 +448,13 @@
       markerColors.push('#888');
       hoverTexts.push('Kwota pocz\u0105tkowa<br>' + plnFmt(startAmount));
 
-      periods.forEach(function(p) {
+      periods.forEach(function(p, periodIndex) {
         var periodLabel = currentFlowGran === 'month' ? shortMonth(p) : p;
+        var suffix = Array(periodIndex + 1).join(zwsp);
         var inc = incByPeriod[p] || 0;
         if (inc > 0) {
           measures.push('relative');
-          xLabels.push('+');
+          xLabels.push('+' + suffix);
           yValues.push(inc);
           running += inc;
           textVals.push('+' + compactFmt(inc));
@@ -464,7 +466,7 @@
           var amt = (expByT1Period[t1] || {})[p] || 0;
           if (amt > 0) {
             measures.push('relative');
-            xLabels.push(t1);
+            xLabels.push(t1 + suffix);
             yValues.push(-amt);
             running -= amt;
             textVals.push('-' + compactFmt(amt));
@@ -474,7 +476,7 @@
         });
 
         measures.push('total');
-        xLabels.push(periodLabel);
+        xLabels.push(periodLabel + suffix);
         yValues.push(running);
         textVals.push(compactFmt(running));
         markerColors.push(running >= 0 ? '#4a90d9' : 'hsl(0,60%,50%)');

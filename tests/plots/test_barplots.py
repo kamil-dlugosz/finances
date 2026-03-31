@@ -29,10 +29,15 @@ class TestBarplotsPerTier1:
         tier1_vals = set(preprocessed_expense_df["Tier1"].dropna().unique())
         assert set(result.keys()) == tier1_vals
 
-    def test_reversed_order(self, preprocessed_expense_df):
+    def test_config_order(self, preprocessed_expense_df):
+        from config import get_tier_tree
         result = create_barplots_per_tier1(preprocessed_expense_df)
         keys = list(result.keys())
-        assert keys == sorted(keys, reverse=True)
+        config_order = get_tier_tree().tier_order(1)
+        key_set = set(keys)
+        expected = [v for v in config_order if v in key_set]
+        expected += sorted(key_set - set(expected))
+        assert keys == expected
 
     def test_each_figure_has_update_menus(self, preprocessed_expense_df):
         result = create_barplots_per_tier1(preprocessed_expense_df)

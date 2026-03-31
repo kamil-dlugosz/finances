@@ -54,7 +54,12 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
         path_lookup[leaf] = " > ".join(parts)
         display_lookup[leaf] = " > ".join(parts[1:]) if len(parts) > 1 else parts[0]
 
-    group_vals = sorted(df[group_col].dropna().unique(), reverse=True)
+    tree = get_tier_tree()
+    config_tier1_order = tree.tier_order(1)
+    present_tier1 = set(df[group_col].dropna().unique())
+    group_vals = [v for v in config_tier1_order if v in present_tier1]
+    for v in sorted(present_tier1 - set(group_vals)):
+        group_vals.append(v)
     granularities = ["year", "quarter", "month", "week"]
 
     result: dict[str, go.Figure] = {}
@@ -84,10 +89,11 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
                     textfont=dict(size=10),
                 ))
             else:
-                stack_vals = sorted(
-                    agg[stack_col].dropna().unique(),
-                    key=lambda v: path_lookup.get(str(v), str(v)),
-                )
+                config_leaves = tree.ordered_leaves
+                present_leaves = set(agg[stack_col].dropna().unique())
+                stack_vals = [v for v in config_leaves if v in present_leaves]
+                for v in sorted(present_leaves - set(stack_vals)):
+                    stack_vals.append(v)
                 for sv in stack_vals:
                     subset = agg[agg[stack_col] == sv].sort_values("Period")
                     display_name = display_lookup.get(str(sv), str(sv))

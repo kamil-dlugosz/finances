@@ -36,6 +36,22 @@ class TestTierTree:
         with pytest.raises(ValueError, match="not found"):
             tree.path("nonexistent")
 
+    def test_tier_order_preserves_config_insertion(self):
+        tree = TierTree({"B": {"D": ["f", "e"]}, "A": {"C": ["g"]}})
+        assert tree.tier_order(1) == ["B", "A"]
+        assert tree.tier_order(2) == ["D", "C"]
+        assert tree.tier_order(3) == ["f", "e", "g"]
+
+    def test_ordered_leaves(self):
+        tree = TierTree({"B": {"D": ["f", "e"]}, "A": {"C": ["g"]}})
+        assert tree.ordered_leaves == ["f", "e", "g"]
+
+    def test_tier_order_real_config(self):
+        tree = get_tier_tree()
+        tier1 = tree.tier_order(1)
+        assert len(tier1) >= 2
+        assert tier1[0] == "Utrzymanie"
+
 
 class TestAppConfig:
     def test_loads_successfully(self):
