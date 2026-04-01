@@ -151,7 +151,7 @@ def create_barplots_per_tier1(df: pd.DataFrame) -> dict[str, go.Figure]:
             yaxis_title="Kwota (PLN)",
             separators=", ",
             margin=dict(t=50, l=40, r=20, b=40),
-            height=350,
+            height=500,
         )
         fig.update_xaxes(type="category", tickangle=-45)
 
