@@ -65,7 +65,6 @@ def main() -> None:
         tier1_colors_json=t1_colors_json,
         output_path=dist_dir / "output.html",
     )
-    logger.info("Dashboard ready: %s", output.resolve())
 
 
 if __name__ == "__main__":
