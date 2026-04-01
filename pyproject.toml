@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "finances"
-version = "0.1.0"
+version = "1.1.0"
 description = "Personal finances dashboard — interactive HTML with sunburst, bar plots, waterfall, and SQL-driven charts."
 authors = ["Kamil Dlugosz"]
 readme = "README.md"
