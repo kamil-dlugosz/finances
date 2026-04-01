@@ -41,7 +41,11 @@ def _anonymize(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     date_cols = set(csv_cfg.date_type_columns)
     float_cols = set(csv_cfg.float_type_columns)
     all_source_cols = set(csv_cfg.column_name_mapping.keys())
-    string_cols = all_source_cols - date_cols - float_cols
+    currency_source_cols = {
+        src for src, dst in csv_cfg.column_name_mapping.items()
+        if str(dst).strip().lower() == "currency"
+    }
+    string_cols = all_source_cols - date_cols - float_cols - currency_source_cols
 
     for col in string_cols:
         if col not in df.columns:
@@ -74,7 +78,9 @@ def _anonymize(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
         )
         noise = rng.normal(loc=0, scale=0.5, size=len(df))
         anonymized = (values + noise).round(2)
-        df[col] = anonymized.map(lambda x: f"{x:.2f}".replace(".", ","))
+        df[col] = anonymized.map(
+            lambda x: f"{x:.2f}".replace(".", ",") if pd.notna(x) else ""
+        )
 
     return df
 

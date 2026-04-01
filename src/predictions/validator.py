@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import logging
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -8,8 +6,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from config import get_config, get_tier_tree
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass

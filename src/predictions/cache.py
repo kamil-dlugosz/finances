@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
 from config import PROJECT_ROOT
-
-logger = logging.getLogger(__name__)
 
 PRED_CACHE_DIR = PROJECT_ROOT / ".cache" / "predictions"
 PRED_FINGERPRINT = PRED_CACHE_DIR / "fingerprint.json"
@@ -54,4 +51,7 @@ def load_prediction_cache(result_name: str) -> str | None:
         return None
     if not is_prediction_cache_valid():
         return None
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return None

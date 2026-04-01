@@ -145,7 +145,7 @@ def _add_tier_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _build_full_path(df: pd.DataFrame) -> pd.DataFrame:
-    dim_cols = [f"Dim{d}" for d in _dimensions()]
+    dim_cols = [f"Dim{d}" for d in _dimensions() if f"Dim{d}" in df.columns]
     tier_cols = [f"Tier{d}" for d in range(1, _tier_tree().tier_depth + 1)]
     all_cols = dim_cols + tier_cols
     df["FullPath"] = df[all_cols].apply(lambda row: "|".join(row.astype(str)), axis=1)
@@ -174,6 +174,17 @@ def _add_transaction_hover(df: pd.DataFrame) -> pd.DataFrame:
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    cols = _preprocessing_columns()
+    required = [
+        cols.date_stamp_column,
+        cols.amount_column,
+        cols.expense_type_column,
+    ]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"Missing required preprocessing columns: {', '.join(missing)}"
+        )
     df = _add_dimension_columns(df)
     df = _add_tier_columns(df)
     df = _apply_custom_tiers(df)

@@ -38,7 +38,7 @@ def _load_pipeline() -> dict:
 @lru_cache(maxsize=1)
 def get_config() -> AppConfig:
     """Load and return the full application config. Result is cached — call
-    ``get_config.cache_clear()`` in tests to force reload."""
+    ``clear_config_cache()`` in tests to force reload."""
     pipeline = _load_pipeline()
     hierarchy = _load_hierarchy()
     return AppConfig(**pipeline, hierarchy=hierarchy)
@@ -48,3 +48,11 @@ def get_config() -> AppConfig:
 def get_tier_tree() -> TierTree:
     """Build and return the tier tree. Cached alongside config."""
     return TierTree(get_config().hierarchy.tiers)
+
+
+def clear_config_cache() -> None:
+    """Clear all cached configuration loaders and derived config objects."""
+    get_tier_tree.cache_clear()
+    get_config.cache_clear()
+    _load_pipeline.cache_clear()
+    _load_hierarchy.cache_clear()

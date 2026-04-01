@@ -4,9 +4,6 @@ import pytest
 import yaml
 from pathlib import Path
 
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
-
 from tools.sql_viewer import _format_sql, _load_queries_config, _save_queries_config
 
 

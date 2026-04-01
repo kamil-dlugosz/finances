@@ -1,14 +1,8 @@
 from __future__ import annotations
-
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
 
 STUB_SUNBURST_JSON = (
     '{"frames":{"50":{"ids":[],"parents":[],"labels":[],"values":[],"hovers":[],"colors":[],"names":[]}},'

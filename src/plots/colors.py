@@ -30,15 +30,13 @@ def tier1_color_map(df: pd.DataFrame) -> dict[str, str]:
     return {v: TIER1_PALETTE[i % len(TIER1_PALETTE)] for i, v in enumerate(tier1_vals)}
 
 
-def tier1_bg_color(hsl: str, alpha: float = 0.12) -> str:
-    """Convert ``hsl(H,S%,L%)`` to ``hsla(H,S%,L%,alpha)`` for table row tinting."""
-    return hsl.replace("hsl(", "hsla(").replace(")", f",{alpha})")
-
-
 def color_for_depth(base_hsl: str, tier_depth: int) -> str:
     """Lighten *base_hsl* by ``(tier_depth-1)*8`` lightness-percent points."""
-    h, s, l_part = base_hsl.split(",")
-    l_val = int(l_part.replace("%)", ""))
+    parts = [p.strip() for p in base_hsl.split(",")]
+    if len(parts) != 3:
+        return base_hsl
+    h, s, l_part = parts
+    l_val = int(l_part.replace("%)", "").strip())
     return f"{h},{s},{min(l_val + (tier_depth - 1) * 8, 85)}%)"
 
 

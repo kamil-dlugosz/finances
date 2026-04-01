@@ -21,7 +21,7 @@ INCOME_PARQUET = CACHE_DIR / "income.parquet"
 
 
 def _count_csv_rows(path: Path) -> int:
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8", errors="replace") as f:
         return max(0, sum(1 for _ in f) - 1)
 
 

@@ -7,7 +7,6 @@ from plots.colors import (
     TIER1_PALETTE,
     DIM_COLOR,
     tier1_color_map,
-    tier1_bg_color,
     color_for_depth,
     tx_color,
     compact_fmt,
@@ -34,13 +33,6 @@ class TestTier1ColorMap:
         assert result["X"] == TIER1_PALETTE[0]
 
 
-class TestBgColor:
-    def test_converts_to_hsla(self):
-        result = tier1_bg_color("hsl(210,60%,50%)")
-        assert result.startswith("hsla(")
-        assert "0.12" in result
-
-
 class TestColorForDepth:
     def test_depth_1_unchanged(self):
         base = "hsl(210,60%,50%)"
@@ -51,6 +43,10 @@ class TestColorForDepth:
         base = "hsl(210,60%,50%)"
         result = color_for_depth(base, 3)
         assert "66%" in result
+
+    def test_handles_whitespace_in_hsl(self):
+        result = color_for_depth("hsl(210, 60%, 50%)", 2)
+        assert "58%" in result
 
 
 class TestTxColor:

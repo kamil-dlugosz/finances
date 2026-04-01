@@ -118,8 +118,9 @@ def create_sql_plots(
                     "args": [{"visible": visibility}],
                 })
 
+            title_text = name if not description else f"{name}: {description}"
             fig.update_layout(
-                title=f"{name}: {description}",
+                title=title_text,
                 updatemenus=[{
                     "type": "buttons",
                     "direction": "left",

@@ -19,6 +19,7 @@ class TestValidator:
     def test_no_suspects_for_consistent_data(self, preprocessed_expense_df):
         report = validate_expense_types(preprocessed_expense_df, similarity_threshold=0.0)
         assert isinstance(report, ValidationReport)
+        assert len(report.suspects) == 0
 
     def test_high_threshold_flags_suspects(self, preprocessed_expense_df):
         report = validate_expense_types(preprocessed_expense_df, similarity_threshold=1.0)

@@ -186,14 +186,11 @@ def sunburst_data_to_json(df: pd.DataFrame) -> str:
         {"name": n, "path": path_lookup.get(n, n)} for n in leaf_tiers
     ]
 
-    t1_colors = tier1_color_map(df)
-
     return json.dumps({
         "max_depth": max_depth,
         "dim_count": dim_count,
         "leaf_tiers": leaf_tiers,
         "leaf_tier_paths": leaf_tier_paths,
-        "tier1_colors": t1_colors,
         "thresholds": sorted(frames_data.keys()),
         "frames": {str(int(k)): v for k, v in frames_data.items()},
     })

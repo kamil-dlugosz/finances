@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from config.models import TierTree, AppConfig
-from config.loader import get_config, get_tier_tree, _load_yaml
+from config.loader import clear_config_cache, get_config, get_tier_tree, _load_yaml
 
 
 class TestTierTree:
@@ -59,6 +59,13 @@ class TestAppConfig:
         assert isinstance(config, AppConfig)
         assert len(config.hierarchy.dimensions) >= 1
         assert config.preprocessing_columns.amount_column == "Amount"
+
+    def test_clear_config_cache_clears_all_cached_entries(self):
+        get_config()
+        get_tier_tree()
+        clear_config_cache()
+        assert get_config.cache_info().currsize == 0
+        assert get_tier_tree.cache_info().currsize == 0
 
 
 class TestLoadYaml:

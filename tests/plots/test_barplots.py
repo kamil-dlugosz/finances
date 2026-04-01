@@ -48,16 +48,20 @@ class TestBarplotsPerTier1:
 
     def test_traces_use_compact_formatting(self, preprocessed_expense_df):
         result = create_barplots_per_tier1(preprocessed_expense_df)
+        found_trace_with_text = False
         for fig in result.values():
             for trace in fig.data:
                 if hasattr(trace, "text") and trace.text is not None:
-                    break
+                    found_trace_with_text = True
+                    text_values = list(trace.text)
+                    assert any(isinstance(t, str) and t for t in text_values)
+        assert found_trace_with_text
 
     def test_legend_grouping(self, preprocessed_expense_df):
         from config import get_tier_tree
         tree = get_tier_tree()
         if tree.tier_depth < 3:
-            return
+            pytest.skip("Legend grouping only applies when tier_depth >= 3")
         result = create_barplots_per_tier1(preprocessed_expense_df)
         for fig in result.values():
             for trace in fig.data:

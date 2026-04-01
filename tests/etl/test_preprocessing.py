@@ -21,12 +21,16 @@ class TestPreprocess:
         assert result["Tier1"].iloc[0] == "Utrzymanie"
 
     def test_full_path_format(self, sample_expense_df):
+        from config import get_config, get_tier_tree
         result = preprocess(sample_expense_df)
         assert "FullPath" in result.columns
         fp = result["FullPath"].iloc[0]
         assert "|" in fp
         parts = fp.split("|")
-        assert len(parts) == 5  # DimYear | DimMonth | Tier1 | Tier2 | Tier3
+        cfg = get_config()
+        tree = get_tier_tree()
+        expected_segments = len(cfg.hierarchy.dimensions) + tree.tier_depth
+        assert len(parts) == expected_segments
 
     def test_transaction_label(self, sample_expense_df):
         result = preprocess(sample_expense_df)

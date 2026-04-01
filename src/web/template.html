@@ -90,7 +90,7 @@
       <h2>Wydatki - sunburst</h2>
       <div class="ctrl-row">
         <label for="sunburst-threshold" style="white-space:nowrap;">Ukryj transakcje poni&#380;ej:</label>
-        <input type="range" id="sunburst-threshold" min="0" max="6" value="3" style="flex:1;max-width:260px;">
+        <input type="range" id="sunburst-threshold" min="0" max="0" value="0" style="flex:1;max-width:260px;">
         <span id="threshold-display" style="min-width:60px;font-weight:600;">50 PLN</span>
         <label style="margin-left:16px;display:flex;align-items:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="sunburst-fill-ring" checked> Wype&#322;nij ca&#322;y pier&#347;cie&#324;
@@ -325,10 +325,16 @@
   /* ====================================================================
      1. SUNBURST — tree-based architecture
      ==================================================================== */
-  var currentThresholdIdx = 3;
+  var thresholdInput = document.getElementById('sunburst-threshold');
+  var currentThresholdIdx = Math.min(3, Math.max(0, SUNBURST_THRESHOLDS.length - 1));
   var hiddenLeafTiers = new Set();
   var fillWholeRing = true;
   var sunburstMaxDepth = MAX_SUNBURST_DEPTH;
+  var minSunburstDepth = Math.max(1, DIM_COUNT + 1);
+
+  thresholdInput.max = String(Math.max(0, SUNBURST_THRESHOLDS.length - 1));
+  thresholdInput.value = String(currentThresholdIdx);
+  document.getElementById('threshold-display').textContent = SUNBURST_THRESHOLDS[currentThresholdIdx] + ' PLN';
 
   var SUNBURST_LAYOUT = {
     margin: {t: 40, l: 20, r: 20, b: 20}, height: 1000, showlegend: false,
@@ -438,7 +444,11 @@
   var depthDisplay = document.getElementById('depth-display');
   depthDisplay.textContent = String(sunburstMaxDepth);
   document.getElementById('depth-minus').addEventListener('click', function() {
-    if (sunburstMaxDepth > 2) { sunburstMaxDepth--; depthDisplay.textContent = String(sunburstMaxDepth); updateSunburst(); }
+    if (sunburstMaxDepth > minSunburstDepth) {
+      sunburstMaxDepth--;
+      depthDisplay.textContent = String(sunburstMaxDepth);
+      updateSunburst();
+    }
   });
   document.getElementById('depth-plus').addEventListener('click', function() {
     if (sunburstMaxDepth < MAX_SUNBURST_DEPTH) { sunburstMaxDepth++; depthDisplay.textContent = String(sunburstMaxDepth); updateSunburst(); }

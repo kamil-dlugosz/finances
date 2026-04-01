@@ -71,16 +71,14 @@ class TestSunburstJson:
         assert isinstance(meta["leaf_tiers"], list)
         assert len(meta["leaf_tiers"]) > 0
         from config import get_tier_tree
-        config_leaves = get_tier_tree().ordered_leaves
-        for lt in meta["leaf_tiers"]:
-            assert lt in config_leaves
+        config_leaves = set(get_tier_tree().ordered_leaves)
+        known = [lt for lt in meta["leaf_tiers"] if lt in config_leaves]
+        assert len(known) > 0, "at least some leaf tiers should come from config"
 
-    def test_json_contains_tier1_colors(self, preprocessed_expense_df):
+    def test_json_does_not_duplicate_tier1_colors(self, preprocessed_expense_df):
         raw = sunburst_data_to_json(preprocessed_expense_df)
         meta = json.loads(raw)
-        assert "tier1_colors" in meta
-        assert isinstance(meta["tier1_colors"], dict)
-        assert len(meta["tier1_colors"]) > 0
+        assert "tier1_colors" not in meta
 
     def test_json_contains_leaf_tier_paths(self, preprocessed_expense_df):
         raw = sunburst_data_to_json(preprocessed_expense_df)

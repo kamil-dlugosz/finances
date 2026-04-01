@@ -8,6 +8,7 @@ from plots.income import (
     create_waterfall,
     build_waterfall_stats,
     build_flowing_waterfall_data,
+    build_waterfall_source_data,
 )
 
 
@@ -99,3 +100,12 @@ class TestFlowingWaterfall:
         assert isinstance(data["expense_by_leaf_month"], dict)
         assert isinstance(data["expense_by_leaf_year"], dict)
         assert len(data["expense_by_leaf_month"]) > 0
+
+
+class TestWaterfallSourceData:
+    def test_returns_valid_json_with_expected_keys(self, sample_income_df, preprocessed_expense_df):
+        raw = build_waterfall_source_data(sample_income_df, preprocessed_expense_df)
+        data = json.loads(raw)
+        assert "months" in data
+        assert "income_by_month" in data
+        assert "expense_by_tier1_month" in data
