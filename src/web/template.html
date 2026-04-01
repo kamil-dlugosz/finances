@@ -48,6 +48,26 @@
 
     /* Flowing waterfall scroll wrapper */
     .flow-scroll { overflow-x: auto; }
+
+    /* Custom accordion legend */
+    .plot-with-legend { display: flex; gap: 16px; align-items: flex-start; }
+    .plot-with-legend > .plot-container,
+    .plot-with-legend > .flow-scroll { flex: 1; min-width: 0; }
+    .custom-legend { width: 230px; flex-shrink: 0; max-height: 720px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; background: #fafafa; font-size: 12px; }
+    .legend-section { border-bottom: 1px solid #ebebeb; }
+    .legend-section:last-child { border-bottom: none; }
+    .legend-header { display: flex; align-items: center; gap: 5px; padding: 6px 8px; cursor: pointer; user-select: none; background: #f2f2f2; font-weight: 600; font-size: 11px; line-height: 1.3; }
+    .legend-header:hover { background: #e8e8e8; }
+    .legend-header-bar { width: 3px; height: 22px; border-radius: 2px; flex-shrink: 0; }
+    .legend-arrow { font-size: 9px; flex-shrink: 0; color: #777; }
+    .legend-title { flex: 1; }
+    .legend-body { padding: 2px 0 4px; }
+    .legend-body.collapsed { display: none; }
+    .legend-item { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 20px; cursor: pointer; line-height: 1.3; }
+    .legend-item:hover { background: #f0f0f0; }
+    .legend-item input[type=checkbox] { cursor: pointer; flex-shrink: 0; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; opacity: 0.85; }
+    .legend-item span.legend-label { color: #333; }
   </style>
 </head>
 <body>
@@ -80,7 +100,10 @@
           <button class="ctrl-btn" id="depth-plus" style="padding:2px 10px;font-weight:700;">+</button>
         </span>
       </div>
-      <div id="sunburst-plot" class="plot-container"></div>
+      <div class="plot-with-legend">
+        <div id="sunburst-plot" class="plot-container"></div>
+        <div id="sunburst-custom-legend" class="custom-legend"></div>
+      </div>
     </div>
 
     <!-- Section 2: Hierarchical Bar Plots -->
@@ -92,7 +115,10 @@
         <button class="gran-btn active" data-gran="month">Miesi&#261;c</button>
         <button class="gran-btn" data-gran="week">Tydzie&#324;</button>
       </div>
-      <div id="barplots-container"></div>
+      <div class="plot-with-legend">
+        <div id="barplots-container"></div>
+        <div id="barplots-custom-legend" class="custom-legend"></div>
+      </div>
     </div>
 
     <!-- Section 3: Income -->
@@ -115,8 +141,11 @@
         <input type="month" id="flowing-end-month" style="padding:2px 6px;border:1px solid #ccc;border-radius:4px;">
         <button id="flowing-reset" class="ctrl-btn" style="font-size:12px;">Resetuj</button>
       </div>
-      <div class="flow-scroll">
-        <div id="flowing-waterfall-plot" class="plot-container"></div>
+      <div class="plot-with-legend">
+        <div class="flow-scroll">
+          <div id="flowing-waterfall-plot" class="plot-container"></div>
+        </div>
+        <div id="waterfall-custom-legend" class="custom-legend"></div>
       </div>
     </div>
 
@@ -220,6 +249,78 @@
   var TIER1_COLORS    = loadData("data-tier1-colors") || {};
 
   /* ====================================================================
+     Custom accordion legend builder (shared by all charts)
+     ==================================================================== */
+  function buildCustomLegend(containerId, leafTierPaths, tier1Colors, hiddenSet, onToggle) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    var groups = {}, groupOrder = [];
+    leafTierPaths.forEach(function(t) {
+      var parts = t.path.split(' > ');
+      var groupPath = parts.slice(0, -1).join(' > ');
+      var leafLabel = parts[parts.length - 1];
+      var tier1 = parts[0];
+      if (!groups[groupPath]) { groups[groupPath] = {tier1: tier1, leaves: []}; groupOrder.push(groupPath); }
+      groups[groupPath].leaves.push({name: t.name, label: leafLabel});
+    });
+
+    groupOrder.forEach(function(groupPath) {
+      var grp = groups[groupPath];
+      var color = tier1Colors[grp.tier1] || '#999';
+
+      var section = document.createElement('div');
+      section.className = 'legend-section';
+
+      var header = document.createElement('div');
+      header.className = 'legend-header';
+      var bar = document.createElement('span');
+      bar.className = 'legend-header-bar';
+      bar.style.backgroundColor = color;
+      var arrow = document.createElement('span');
+      arrow.className = 'legend-arrow';
+      arrow.textContent = '\u25bc';
+      var title = document.createElement('span');
+      title.className = 'legend-title';
+      title.textContent = groupPath;
+      header.appendChild(bar); header.appendChild(arrow); header.appendChild(title);
+
+      var body = document.createElement('div');
+      body.className = 'legend-body';
+
+      header.addEventListener('click', function() {
+        var collapsed = body.classList.toggle('collapsed');
+        arrow.textContent = collapsed ? '\u25b6' : '\u25bc';
+      });
+
+      grp.leaves.forEach(function(leaf) {
+        var item = document.createElement('label');
+        item.className = 'legend-item';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !hiddenSet.has(leaf.name);
+        var dot = document.createElement('span');
+        dot.className = 'legend-dot';
+        dot.style.backgroundColor = color;
+        var lbl = document.createElement('span');
+        lbl.className = 'legend-label';
+        lbl.textContent = leaf.label;
+        cb.addEventListener('change', function() {
+          if (cb.checked) hiddenSet.delete(leaf.name);
+          else hiddenSet.add(leaf.name);
+          onToggle();
+        });
+        item.appendChild(cb); item.appendChild(dot); item.appendChild(lbl);
+        body.appendChild(item);
+      });
+
+      section.appendChild(header); section.appendChild(body);
+      container.appendChild(section);
+    });
+  }
+
+  /* ====================================================================
      1. SUNBURST — tree-based architecture
      ==================================================================== */
   var currentThresholdIdx = 3;
@@ -228,8 +329,7 @@
   var sunburstMaxDepth = MAX_SUNBURST_DEPTH;
 
   var SUNBURST_LAYOUT = {
-    margin: {t: 40, l: 20, r: 20, b: 20}, height: 1000, showlegend: true,
-    legend: {y: 0.5, yanchor: 'middle', font: {size: 11}, itemsizing: 'constant', tracegroupgap: 8},
+    margin: {t: 40, l: 20, r: 20, b: 20}, height: 1000, showlegend: false,
     xaxis: {visible: false}, yaxis: {visible: false}
   };
 
@@ -319,21 +419,7 @@
       branchvalues: 'total', maxdepth: sunburstMaxDepth, sort: false
     };
     if (flat.colors.length) trace.marker = {colors: flat.colors};
-    var dummyTraces = LEAF_TIER_PATHS.map(function(t) {
-      var parts = t.path.split(' > ');
-      var leafName = parts[parts.length - 1];
-      var groupPath = parts.slice(0, -1).join(' > ');
-      var tier1 = parts[0];
-      return {
-        x: [null], y: [null], type: 'scatter', mode: 'markers',
-        marker: {size: 8, color: TIER1_COLORS[tier1] || '#999'},
-        name: leafName,
-        legendgroup: groupPath || leafName,
-        legendgrouptitle: {text: groupPath || leafName, font: {size: 12, weight: 'bold'}},
-        visible: hiddenLeafTiers.has(t.name) ? 'legendonly' : true, showlegend: true
-      };
-    });
-    Plotly.react('sunburst-plot', [trace].concat(dummyTraces), SUNBURST_LAYOUT, {responsive: true});
+    Plotly.react('sunburst-plot', [trace], SUNBURST_LAYOUT, {responsive: true});
     if (currentLevel && flat.ids.indexOf(currentLevel) >= 0) {
       Plotly.restyle('sunburst-plot', {level: currentLevel}, [0]);
     }
@@ -356,23 +442,15 @@
     if (sunburstMaxDepth < MAX_SUNBURST_DEPTH) { sunburstMaxDepth++; depthDisplay.textContent = String(sunburstMaxDepth); updateSunburst(); }
   });
   updateSunburst();
-
-  document.getElementById('sunburst-plot').on('plotly_legendclick', function(evtData) {
-    if (evtData.curveNumber === 0) return false;
-    var leafIdx = evtData.curveNumber - 1;
-    if (leafIdx < 0 || leafIdx >= LEAF_TIER_PATHS.length) return false;
-    var tierName = LEAF_TIER_PATHS[leafIdx].name;
-    if (hiddenLeafTiers.has(tierName)) hiddenLeafTiers.delete(tierName);
-    else hiddenLeafTiers.add(tierName);
-    updateSunburst();
-    return false;
-  });
+  buildCustomLegend('sunburst-custom-legend', LEAF_TIER_PATHS, TIER1_COLORS, hiddenLeafTiers, updateSunburst);
 
   /* ====================================================================
      2. BARPLOTS — per-Tier1, single column
      ==================================================================== */
   var barTier1Names = Object.keys(BARPLOTS_DATA);
   var barContainer = document.getElementById('barplots-container');
+  var hiddenBarLeafTiers = new Set();
+  var currentBarGran = 'month';
 
   barTier1Names.forEach(function(t1name) {
     var div = document.createElement('div');
@@ -380,19 +458,23 @@
     div.className = 'plot-container';
     barContainer.appendChild(div);
     var figData = BARPLOTS_DATA[t1name];
-    var layout = Object.assign({}, figData.layout);
+    var layout = Object.assign({}, figData.layout, {showlegend: false});
     delete layout.updatemenus;
     Plotly.newPlot(div.id, figData.data, layout, {responsive: true});
   });
 
-  function updateBarGranularity(gran) {
+  function updateBarVisibility() {
     barTier1Names.forEach(function(t1name) {
       var figData = BARPLOTS_DATA[t1name];
       var buttons = figData.layout.updatemenus ? figData.layout.updatemenus[0].buttons : [];
-      var btn = buttons.find(function(b) { return b.label.toLowerCase() === gran; });
+      var btn = buttons.find(function(b) { return b.label.toLowerCase() === currentBarGran; });
       if (!btn) return;
       var divId = 'barplot-' + t1name.replace(/[^a-zA-Z0-9]/g, '_');
-      Plotly.restyle(divId, {visible: btn.args[0].visible});
+      var visibility = btn.args[0].visible.slice();
+      figData.data.forEach(function(trace, i) {
+        if (hiddenBarLeafTiers.has(trace.name)) visibility[i] = false;
+      });
+      Plotly.restyle(divId, {visible: visibility});
     });
   }
 
@@ -400,10 +482,14 @@
     btn.addEventListener('click', function() {
       document.querySelectorAll('#bar-granularity .gran-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      updateBarGranularity(btn.dataset.gran);
+      currentBarGran = btn.dataset.gran;
+      updateBarVisibility();
     });
   });
-  updateBarGranularity('month');
+  updateBarVisibility();
+  buildCustomLegend('barplots-custom-legend', LEAF_TIER_PATHS, TIER1_COLORS, hiddenBarLeafTiers, function() {
+    updateBarVisibility();
+  });
 
   /* ====================================================================
      3. INCOME plot
@@ -529,18 +615,16 @@
       });
 
       var numBars = xLabels.length;
-      var barAreaWidth = Math.max(1200, numBars * 42);
-      var legendExtra = 280;
-      var totalWidth = barAreaWidth + legendExtra;
+      var plotWidth = Math.max(1200, numBars * 42);
       var plotDiv = document.getElementById('flowing-waterfall-plot');
-      plotDiv.style.width = totalWidth + 'px';
+      plotDiv.style.width = plotWidth + 'px';
 
       var allVals = bases.map(function(b, i) { return b + heights[i]; });
       var yMax = Math.max.apply(null, allVals);
       var yMin = Math.min.apply(null, bases);
       var plotHeight = Math.min(700, Math.max(500, 500 + Math.round((yMax - yMin) * 0.003)));
 
-      var barTrace = {
+      Plotly.react('flowing-waterfall-plot', [{
         type: 'bar',
         x: xLabels,
         y: heights,
@@ -554,34 +638,15 @@
         hoverinfo: 'text',
         marker: {color: markerColors, pattern: {shape: markerPatterns, solidity: 0.3}},
         showlegend: false
-      };
-
-      var flowDummyTraces = LEAF_TIER_PATHS.map(function(t) {
-        var parts = t.path.split(' > ');
-        var leafName = parts[parts.length - 1];
-        var groupPath = parts.slice(0, -1).join(' > ');
-        var tier1 = parts[0];
-        return {
-          x: [null], y: [null], type: 'scatter', mode: 'markers',
-          marker: {size: 8, color: TIER1_COLORS[tier1] || '#999'},
-          name: leafName,
-          legendgroup: groupPath || leafName,
-          legendgrouptitle: {text: groupPath || leafName, font: {size: 12, weight: 'bold'}},
-          visible: hiddenFlowLeafTiers.has(t.name) ? 'legendonly' : true,
-          showlegend: true
-        };
-      });
-
-      Plotly.react('flowing-waterfall-plot', [barTrace].concat(flowDummyTraces), {
+      }], {
         title: 'Bilans w czasie (' + (currentFlowGran === 'month' ? 'miesi\u0119cznie' : 'rocznie') + ')',
         yaxis_title: 'Kwota (PLN)',
-        margin: {t: 50, l: 60, r: legendExtra, b: 80},
+        margin: {t: 50, l: 60, r: 20, b: 80},
         xaxis: {tickvals: subtotalTickvals, ticktext: subtotalTicktext, tickangle: -45, type: 'category'},
-        showlegend: true,
-        legend: {tracegroupgap: 8, font: {size: 11}},
+        showlegend: false,
         separators: ', ',
         height: plotHeight,
-        width: totalWidth,
+        width: plotWidth,
         shapes: connectorShapes,
         bargap: 0.15,
         uniformtext: {minsize: 14, mode: 'show'}
@@ -605,17 +670,7 @@
       renderFlowingWaterfall();
     });
     renderFlowingWaterfall();
-
-    document.getElementById('flowing-waterfall-plot').on('plotly_legendclick', function(evtData) {
-      if (evtData.curveNumber === 0) return false;
-      var leafIdx = evtData.curveNumber - 1;
-      if (leafIdx < 0 || leafIdx >= LEAF_TIER_PATHS.length) return false;
-      var tierName = LEAF_TIER_PATHS[leafIdx].name;
-      if (hiddenFlowLeafTiers.has(tierName)) hiddenFlowLeafTiers.delete(tierName);
-      else hiddenFlowLeafTiers.add(tierName);
-      renderFlowingWaterfall();
-      return false;
-    });
+    buildCustomLegend('waterfall-custom-legend', LEAF_TIER_PATHS, TIER1_COLORS, hiddenFlowLeafTiers, renderFlowingWaterfall);
   })();
 
   /* ====================================================================
