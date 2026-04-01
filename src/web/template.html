@@ -76,18 +76,18 @@
 
   <!-- Always-visible sidebar navigation -->
   <nav class="side-nav" id="side-nav">
-    <a href="#sec-sunburst">Wydatki &mdash; rozk&#322;ad</a>
-    <a href="#sec-barplots">Wydatki w czasie</a>
-    <a href="#sec-income">Przychody</a>
-    <a href="#sec-flowing">Bilans w czasie</a>
-    <a href="#sec-stats">Statystyki kategorii</a>
-    <a href="#sec-sql">Wykresy SQL</a>
+    <a href="#sec-sunburst">Wydatki - sunburst</a>
+    <a href="#sec-barplots">Wydatki - barplots</a>
+    <a href="#sec-income">Przychody - barplot</a>
+    <a href="#sec-flowing">Bilans - waterfall</a>
+    <a href="#sec-stats">Wydatki - table</a>
+    <a href="#sec-sql">SQL - tables</a>
   </nav>
 
   <div class="main-content">
     <!-- Section 1: Sunburst -->
     <div class="section" id="sec-sunburst">
-      <h2>Wydatki &#8212; rozk&#322;ad</h2>
+      <h2>Wydatki - sunburst</h2>
       <div class="ctrl-row">
         <label for="sunburst-threshold" style="white-space:nowrap;">Ukryj transakcje poni&#380;ej:</label>
         <input type="range" id="sunburst-threshold" min="0" max="6" value="3" style="flex:1;max-width:260px;">
@@ -110,7 +110,7 @@
 
     <!-- Section 2: Hierarchical Bar Plots -->
     <div class="section" id="sec-barplots">
-      <h2>Wydatki w czasie</h2>
+      <h2>Wydatki - barplots</h2>
       <div id="bar-granularity" class="ctrl-row">
         <button class="gran-btn" data-gran="year">Rok</button>
         <button class="gran-btn" data-gran="quarter">Kwarta&#322;</button>
@@ -125,13 +125,13 @@
 
     <!-- Section 3: Income -->
     <div class="section" id="sec-income">
-      <h2>Przychody</h2>
+      <h2>Przychody - barplot</h2>
       <div id="income-plot" class="plot-container"></div>
     </div>
 
     <!-- Section 4: Flowing Waterfall -->
     <div class="section" id="sec-flowing">
-      <h2>Bilans w czasie</h2>
+      <h2>Bilans - waterfall</h2>
       <div class="ctrl-row">
         <button class="gran-btn flow-gran-btn active" data-flow-gran="month">Miesi&#261;c</button>
         <button class="gran-btn flow-gran-btn" data-flow-gran="year">Rok</button>
@@ -153,7 +153,7 @@
 
     <!-- Section 5: Stats -->
     <div class="section" id="sec-stats">
-      <h2>Statystyki kategorii</h2>
+      <h2>Wydatki - table</h2>
       <div class="stats-controls">
         <span>G&#322;&#281;boko&#347;&#263;:</span>
         <span id="stats-depth-btns" class="btn-group"></span>
@@ -172,7 +172,7 @@
 
     <!-- Section 6: SQL-Driven Plots -->
     <div class="section" id="sec-sql">
-      <h2>Wykresy z zapyta&#324; SQL</h2>
+      <h2>SQL - tables</h2>
     </div>
 
     <div class="footer">
